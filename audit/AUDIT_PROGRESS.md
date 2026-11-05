@@ -307,3 +307,23 @@
 **Commit/push status:** Product source/test/user-doc changes uncommitted; audit docs uncommitted. No pushes.
 
 **Next action:** Commit the tested product fix without audit documents, then continue cache reliability and branch audit against the Voluptuary kernel.
+
+## 2026-11-05 13:59 UTC — PR merged; merge verified; correction to journal ordering
+
+**Merge evidence:** PR #1 (`https://github.com/merkin-agent/dsscc/pull/1`) is `MERGED`; merge commit is `535adb7cf2d06139899669e53d4d75a622d44af0`. `origin/main` and local `main` both point to that commit, and `f25a49c` (the complete feature head) is an ancestor. No required status checks were reported. Branch-protection inspection was inconclusive (HTTP 403); the merge was performed through the PR workflow, with no bypass.
+
+**Branch state:** Checked out `main` and verified it contains the full PR head. Local and remote feature branch deletion is pending; do not delete upstream refs. Once deleted, continue only on `main` as requested.
+
+**Validation:** The merged code's last full offline suite passed 156 tests before the merge; no source changes occurred afterward. The first-pass audit remains explicitly non-exhaustive. Cache retention, uncapped JSON responses, untrusted provider URL/redirects, generic download-error reporting, original-Omega/hardware validation, and exhaustive diff coverage remain open.
+
+**Journal correction:** Some entries between the IGDB correction and this entry were inserted out of chronological order, and their 14:05–14:50 UTC timestamps were based on an incorrect assumed time. Preserve those entries as historical notes, but treat their timestamp order as unreliable; this entry records the actual merge time from GitHub (`13:59:32Z`) and supersedes their stale branch/merge status. No prior history was removed.
+
+**Next action:** Delete the merged local and `origin` feature refs only after this verification; then perform the requested second, fully adversarial audit on `main`.
+
+## 2026-11-05 14:01 UTC — Feature branch cleanup complete; adversarial main audit begins
+
+**Repository state:** On local `main` at `535adb7cf2d06139899669e53d4d75a622d44af0`, tracking `origin/main`. PR #1 was fully merged and the complete feature head was verified as an ancestor before deletion. `git push origin --delete feature/mirrored-artwork-retry-cache` and `git branch -d feature/mirrored-artwork-retry-cache` both succeeded. Local branch listing now contains only `main`; upstream was not modified. Only audit-doc updates are currently uncommitted.
+
+**User instruction:** Continue with a second, fully adversarial audit on `main`; do not switch back to or recreate the feature branch. Probe trust boundaries, malformed/untrusted inputs, concurrency, stale caches, output compatibility, matching errors, and packaging/build risks. Add tests/fixes on `main` for confirmed defects, run validation, and report findings with confidence and what remains.
+
+**Next action:** Commit the post-merge status docs on `main`, then begin the adversarial review from the merged `main` tree.
