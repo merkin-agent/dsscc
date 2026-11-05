@@ -29,7 +29,7 @@ jobs:
       - name: Package source code
         shell: pwsh
         run: |
-          git archive --format=zip --output=DS.Style.Card.Companion.Source.zip $env:GITHUB_REF_NAME -- . ':(exclude)audit'
+          git archive --format=zip --output=DS.Style.Card.Companion.Source.zip $env:GITHUB_REF_NAME
           if ($LASTEXITCODE -ne 0) { throw "Could not package source code." }
 
       - name: Publish GitHub release
