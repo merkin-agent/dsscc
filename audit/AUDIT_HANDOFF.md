@@ -8,13 +8,13 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 
 ## B. Repository state
 
-- Branch: `feature/mirrored-artwork-retry-cache`, local `HEAD` at `ac25553` (`Validate reused thumbnails against kernel format`); remote feature refs remain at `8e95eb2`.
-- Working tree: five product commits ahead of `origin`; only the uncommitted audit documents remain. No changes were pushed.
+- Branch: `feature/mirrored-artwork-retry-cache`, local `HEAD` at `48b1ee3` (`Document artwork audit findings and handoff`); remote feature ref remains at `8e95eb2`.
+- Working tree: clean; five product commits and one docs-only audit commit ahead of `origin`. No changes were pushed yet.
 - Remotes: `origin` points to `merkin-agent/dsscc`; `upstream` points to `voluptuary/dsscc`. Both default branches are `main`, and both fetched `main` refs are identical at `98fed08d617b982b58d62c1bb9c2b4488b5ac8be`. Both remotes also have the feature branch at the audit HEAD (`8e95eb2`).
 - Divergence: HEAD is 34 commits ahead and zero behind both default branches, with the same merge base `98fed08`.
 - Baseline: `python -m unittest discover -s tests -v` passed 147 tests; targeted `py_compile` passed. Python 3.14.2 and Pillow 13.0.0 are installed. PyInstaller is absent; the documented Windows build is not yet attempted.
 - Latest validation: after the kernel-compatible thumbnail reuse fix, the full offline suite passes 155 tests; focused SD/cache/local-pack tests pass (30 tests), targeted compilation and `git diff --check` pass.
-- Product commits, local only and unpushed: `8dd05f2` per-size CUSTOM limits; `337a573` atomic cache writes; `c364816` provider byte and image pixel bounds; `c90562e` Libretro HTTP response bound; `ac25553` kernel-compatible existing-thumbnail validation. Audit documents remain uncommitted and will be committed separately.
+- Product commits, local only and unpushed: `8dd05f2` per-size CUSTOM limits; `337a573` atomic cache writes; `c364816` provider byte and image pixel bounds; `c90562e` Libretro HTTP response bound; `ac25553` kernel-compatible existing-thumbnail validation. Audit documents are committed separately as docs-only commit `48b1ee3`.
 
 ## C. Audit state
 
@@ -41,7 +41,7 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 2. Determine whether the original-Omega variant is in scope and, if so, use its kernel source as a separate model comparison; do not assume DE support proves original support.
 3. Decide/document a cache eviction or clear policy for `SD scan artwork` and `SD scan ROM artwork`; inspect actual cache-path callers and provide actionable UI or user guidance if appropriate.
 4. Continue remaining branch-diff review, particularly local-pack matching, save conversion, and Windows release packaging; test any confirmed defects offline.
-5. Commit audit docs as a docs-only commit, then push the five validated code commits plus the docs commit only to `origin` if permitted and verify remote state. Never push upstream.
+5. Push the five validated code commits and docs-only audit commit `48b1ee3` only to `origin`, then verify remote state. Never push upstream.
 
 ## E. Validation and tooling
 
