@@ -8,6 +8,7 @@ import shutil
 import sys
 import threading
 import time
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -4729,9 +4730,18 @@ class ThumbnailScraperApp(tk.Tk):
             with Image.open(io.BytesIO(data)) as source_image:
                 source_image.load()
                 converted = source_image.convert("RGBA")
-                temporary = cache_path.with_suffix(".tmp.png")
-                converted.save(temporary, format="PNG")
-                temporary.replace(cache_path)
+                descriptor, temporary_name = tempfile.mkstemp(
+                    prefix=f".{cache_path.stem}.",
+                    suffix=".tmp.png",
+                    dir=cache_path.parent,
+                )
+                os.close(descriptor)
+                temporary = Path(temporary_name)
+                try:
+                    converted.save(temporary, format="PNG")
+                    temporary.replace(cache_path)
+                finally:
+                    temporary.unlink(missing_ok=True)
         return str(cache_path)
 
     def ask_sd_download_fallback_skip(self, system: str, art_name: str, error: Exception | str) -> str:

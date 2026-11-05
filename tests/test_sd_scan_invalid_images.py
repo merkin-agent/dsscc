@@ -7,7 +7,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from PIL import Image
 
@@ -211,6 +211,42 @@ class SdScanInvalidImageTests(unittest.TestCase):
             self.assertEqual(second["cache_hits"], 1)
             self.assertEqual(len(second["additions"]), 1)
             self.assertEqual(Path(second["additions"][0].image_path), first_cache_path)
+
+    def test_concurrent_cache_writes_use_independent_staging_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            app, _prompts = make_app(Path(temp) / "app")
+            target = Path(temp) / "app" / "shared.png"
+            payloads = [png_bytes(), png_bytes((80, 80))]
+            barrier = threading.Barrier(len(payloads))
+            original_save = Image.Image.save
+
+            def synchronized_save(image, output, *args, **kwargs):
+                result = original_save(image, output, *args, **kwargs)
+                barrier.wait(timeout=5)
+                return result
+
+            errors = []
+
+            def write_cache(payload):
+                try:
+                    app.cache_sd_scan_image(target, payload, overwrite=True)
+                except Exception as exc:
+                    errors.append(exc)
+
+            with patch.object(Image.Image, "save", synchronized_save):
+                threads = [
+                    threading.Thread(target=write_cache, args=(payload,))
+                    for payload in payloads
+                ]
+                for thread in threads:
+                    thread.start()
+                for thread in threads:
+                    thread.join(timeout=10)
+
+            self.assertFalse(any(thread.is_alive() for thread in threads))
+            self.assertEqual(errors, [])
+            self.assertTrue(APP_MODULE.is_valid_image_file(target))
+            self.assertEqual(list(target.parent.iterdir()), [target])
 
     def test_existing_sd_imgs2_thumbnail_is_skipped_without_download(self):
         calls = []
