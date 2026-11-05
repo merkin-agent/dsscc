@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## v2.0.6 - Faster SD artwork scans
 
-- Reuse prebuilt Libretro lookup indexes during repeated SD ROM scans.
+- Reuse prebuilt Libretro lookup indexes during repeated SD ROM scans, reducing repeated sorting and normalization work without changing artwork ranking or matching behavior.
 
 ## v2.0.5 - Artwork matching and reliability
 
