@@ -21,7 +21,7 @@ The Local Pack folder is a read-only artwork source. When "Prefer matching local
 
 Console folders in the Local Pack are recognized by common names (for example NES, Nintendo, Original Nintendo, Famicom, Game Boy, GBC, Game Gear, Master System, SMS, TurboGrafx-16, TG16, PC Engine, Neo Geo Pocket Color, NGPC). Artwork for a ROM is taken from that console's folder first, so a Game Boy image is not used for the NES game with the same title. A folder named just "Nintendo" is treated as NES unless it contains a more specific console folder such as "Game Boy". If a console has no folder of its own, artwork in other consoles' folders is skipped and the scraper moves on to the next artwork source.
 
-By default, scanned ROM artwork mirrors each ROM's directory path under IMGS and IMGS2. The mirrored files do not use the flat CUSTOM index and are not limited to 256 images. "Legacy CUSTOM" remains available for older kernels/workflows and is limited to 256 ordinary indexed images per size. Extension defaults such as CUSTOM/gb.bmp are supported by kernels with the matching artwork changes.
+By default, scanned ROM artwork mirrors each ROM's directory path under IMGS and IMGS2. The mirrored files do not use the flat CUSTOM index and are not limited to 256 images. "Legacy CUSTOM" remains available for older kernels/workflows and is limited to 256 files per size. Extension defaults such as CUSTOM/gb.bmp are loaded directly by compatible kernels but count toward that folder's 256-file scan limit.
 
 AUTOMATIC ARTWORK FALLBACK (v1.10.3)
 

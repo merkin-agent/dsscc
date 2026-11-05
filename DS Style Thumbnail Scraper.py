@@ -881,6 +881,15 @@ def output_path_for_custom_name(output_root: Path, name: str) -> Path:
     return output_root / "CUSTOM" / f"{validate_custom_art_name(name)}.bmp"
 
 
+def custom_output_manifest_overflow(custom_entries: dict[str, set[str]]) -> dict[str, int]:
+    """Return per-size CUSTOM file counts exceeding the kernel manifest limit."""
+    return {
+        size: len(names)
+        for size, names in custom_entries.items()
+        if len(names) > 256
+    }
+
+
 def sd_scan_report_directory(base_dir: Path) -> Path:
     legacy_output_names = (
         "DS Style Thumbnail Scraper Output",
@@ -4467,15 +4476,6 @@ class ThumbnailScraperApp(tk.Tk):
                 return ""
         return ""
 
-    @staticmethod
-    def is_extension_default_name(name: str) -> bool:
-        """Extension defaults are loaded directly by the kernel, outside its index."""
-        supported_extensions = {
-            extension.lstrip(".").casefold()
-            for extension in SYSTEM_BY_EXTENSION
-        }
-        return name.casefold() in supported_extensions
-
     def scan_sd_card(self):
         if self.scan_running:
             return
@@ -5903,16 +5903,21 @@ class ThumbnailScraperApp(tk.Tk):
                 relative = self.custom_art_relative_path(item) if layout == "Mirrored" else ""
                 if relative:
                     mirror_entries[index] = relative
-                elif not self.is_extension_default_name(item.new_code):
+                else:
                     custom_entries[item.size].add(item.new_code.casefold())
 
-            custom_file_count = sum(len(names) for names in custom_entries.values())
-            if custom_file_count > 255:
+            custom_overflow = custom_output_manifest_overflow(custom_entries)
+            if custom_overflow:
+                details = "\n".join(
+                    f"{size}: {count} files (maximum 256)"
+                    for size, count in sorted(custom_overflow.items())
+                )
                 messagebox.showwarning(
                     APP_NAME,
-                    f"Custom output exceeds its 255-file total limit ({custom_file_count} files).\n\n"
+                    "Custom output exceeds the kernel's 256-file limit for a size:\n\n"
+                    f"{details}\n\n"
                     "Use Mirrored output for ROM-matched artwork, or reduce the number of Custom entries. "
-                    "System defaults such as gb.bmp and nes.bmp do not count toward the limit.",
+                    "Extension-default files count toward the CUSTOM folder scan limit.",
                 )
                 return
 
