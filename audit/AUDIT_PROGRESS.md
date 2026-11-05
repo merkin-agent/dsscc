@@ -491,3 +491,53 @@
 **Validation:** Focused Goomba tests — 21 passed; full offline suite — 165 passed; compile and whitespace checks passed.
 
 **Next action:** Commit the audit docs separately, push both to `origin/main`, verify, then continue the adversarial audit.
+
+## 2026-11-05 14:22 UTC — Secondary-kernel comparison and findings reconciliation
+
+**Objective:** Check applicable artwork-related changes in FrankieT19's secondary Omega DE repository without treating it as the compatibility authority.
+
+**Evidence:** The secondary repo's `main` currently points to recent installer updates (`67a5f7ba`); its Omega DE v8.0 transition is commit `6d6084e0`. The recent artwork-fit work (`271cfacf`, `3da3bfc5`) changes `docs/manager/js/artwork.js` and `docs/manager/js/images.js`: optional browser-manager fit/fill modes, backgrounds, transforms, and reset controls. Its `source/system_browser.h` handles launcher browser state; no more relevant DSSCC pack-format behavior was identified in the inspected paths. The primary Voluptuary kernel remains the source of truth (target v8.2.0, previously recorded).
+
+**Disposition:** No secondary improvement was ported. Those changes are optional browser-manager UX/image presentation, not a correction to the kernel's thumbnail path, file format, or scan contract. Porting them into this desktop app would change preview/build behavior and needs separate product design and image-regression coverage; no compatible bug fix was established.
+
+**Reconciled results:** Provider fallback failures are accumulated and included in scan diagnostics; common credential query fields are redacted. Libretro download failures offer fallback or skip. No additional error-reporting defect was verified in those paths. Remaining cache limitation is confirmed: both per-ROM and provider-image cache entries can remain stale indefinitely, and cache/index storage has no eviction or user clear/refresh action. This remains open because retention and refresh UX are unspecified; misses are not negatively cached, and cache writes are atomic.
+
+**Validation/state:** No code changed in this comparison. The latest product change `9cf9aab` passed 165 tests and the Goomba-focused 21 tests; that commit and its audit doc state are pushed to `origin/main` as of the prior checkpoint. This entry is pending docs-only commit.
+
+**Scope limitation:** The merged feature range is 34 product/history commits and 40 changed paths. The branch diff review remains selective rather than line-by-line exhaustive; the adversarial pass focused on trust/resource boundaries, kernel output compatibility, cache behavior, provider fallback, and save conversion. Windows packaging and physical-card behavior are still unverified.
+
+**Next action:** Update the current handoff to the verified remote state, run final checks on `main`, and prepare the detailed findings report with unresolved limitations clearly identified.
+
+## 2026-11-05 14:23 UTC — No-Intro bracket-tag matching review
+
+**Objective:** Examine filename normalization for false negatives when preserving title text and removing release metadata.
+
+**Finding:** **Likely defect (low-to-medium, confidence 9/10):** `strip_nointro_tags()` removes every square-bracketed substring, although only recognized No-Intro dump flags should be removed. A legitimate title such as `Game [Lost Levels] (USA)` is reduced to `Game (USA)`, weakening provider matching and potentially conflating distinct titles. This affects online query cleanup only; ROM filenames, output paths, and cache identities remain unchanged.
+
+**Planned fix/regression:** Strip only recognized dump markers (`[!]`, `[b1]`, `[h]`, common single-letter status tags, and translation markers such as `[T+Eng]`); preserve unknown bracketed title text. Add a regression covering both title preservation and known tag removal.
+
+**Status:** Reproduction derived from the regex; implementation and validation pending.
+
+**Related call-site follow-up:** `clean_title()` in `ezflash_gba_thumbs.py` is also used to index and query local packs, and it removes every parenthetical and bracketed phrase. Therefore the initial planned `strip_nointro_tags()` change alone would not protect local-pack matching. Extend the fix to share conservative tag parsing while dropping recognized region tags for region-neutral local matching, and add an end-to-end local-pack regression with two bracket-distinguished titles.
+
+## 2026-11-05 14:27 UTC — Conservative ROM title normalization fixed
+
+**Fix:** `strip_nointro_tags()` now removes only recognized square-bracket dump/translation markers and can optionally remove recognized region tags for region-neutral matching. `ezflash_gba_thumbs.clean_title()` now uses that logic, preserving unknown bracketed/parenthetical title text while still removing known release tags and regions.
+
+**Regression coverage:** Added an offline local-pack test with two titles that differ only by bracketed subtitle, and a No-Intro cleanup test that preserves unknown bracket text while removing `[!]`, `[b1]`, and `[T+Eng]`. These fail with the prior unconditional square-bracket removal.
+
+**Validation:** Focused local-pack/title tests — 15 passed. Full offline suite — 167 passed. Compilation and `git diff --check` passed.
+
+**State:** Product changes and tests are uncommitted; audit docs are modified separately. This fix addresses query normalization, not every possible ambiguous naming/false-positive case.
+
+**Next action:** Commit matching code/tests separately, update handoff/docs with the confirmed count, then run final review checks on `main`.
+
+## 2026-11-05 14:28 UTC — Title normalization fix committed
+
+**Milestone:** The conservative bracket-tag cleanup and local-pack matching regression were committed as `1a5c589` (`Preserve bracketed ROM title text`). The code change is local and not yet pushed; only audit-doc edits remain in the worktree.
+
+**Validation:** Full offline suite — 167 passed. Focused local-pack and ROM-normalization tests — 15 passed. Compilation and `git diff --check` passed.
+
+**Correction:** The preceding 14:27 entry described the fix as uncommitted; that status has been superseded by this product commit.
+
+**Next action:** Commit audit docs separately, push both to `origin/main`, verify remote state, then perform final checks and close the audit with explicit scope limitations.
