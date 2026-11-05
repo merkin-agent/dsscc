@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import re
 import struct
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -23,6 +25,33 @@ GB_RAM_SIZES = {1: 0x800, 2: 0x2000, 3: 0x8000, 4: 0x20000, 5: 0x10000}
 GB_MODE_GB = 0
 GB_MODE_GBC_SGB = 3
 CONFIG_GB_MODE_MASK = 0x0C
+
+
+def read_bounded_bytes(path: Path, maximum: int, description: str) -> bytes:
+    with Path(path).open("rb") as source:
+        data = source.read(maximum + 1)
+    if len(data) > maximum:
+        raise ValueError(f"{description} exceeds the supported {maximum}-byte limit.")
+    return data
+
+
+def write_bytes_atomically(path: Path, data: bytes) -> None:
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.",
+        suffix=".tmp",
+        dir=destination.parent,
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(data)
+            output.flush()
+            os.fsync(output.fileno())
+        temporary.replace(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 @dataclass(frozen=True)

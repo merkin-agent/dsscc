@@ -35,16 +35,21 @@ from thumbnail_rendering import fit_image_to_canvas, should_fit_art
 from rom_matching import compute_rom_hashes, strip_nointro_tags
 from json_cache import write_json_atomic
 from goomba_save_converter import (
+    ARCHIVE_SIZE,
+    FLASHGBX_MBC3_RTC_SIZE,
     GB_MODE_GB,
     GB_MODE_GBC_SGB,
     GoombaSave,
+    MAX_SAVE_SIZE,
     build_goomba_archive,
     extract_goomba_saves,
     merge_goomba_archive,
     match_save_to_rom_info,
+    read_bounded_bytes,
     scan_gb_rom_index,
     save_filename,
     strip_mbc3_rtc_trailer,
+    write_bytes_atomically,
 )
 
 from ezflash_gba_thumbs import (
@@ -3303,7 +3308,9 @@ class ThumbnailScraperApp(tk.Tk):
                         archive_path.name,
                     )
                     try:
-                        saves = extract_goomba_saves(archive_path.read_bytes())
+                        saves = extract_goomba_saves(
+                            read_bounded_bytes(archive_path, ARCHIVE_SIZE, "The ESV archive")
+                        )
                         counts: dict[str, int] = {}
                         for save in saves:
                             title_filename = save_filename(save.title)
@@ -3326,7 +3333,7 @@ class ThumbnailScraperApp(tk.Tk):
                                 )
                                 continue
                             destination.parent.mkdir(parents=True, exist_ok=True)
-                            destination.write_bytes(save.data)
+                            write_bytes_atomically(destination, save.data)
                             converted += 1
                     except (OSError, ValueError) as exc:
                         failures.append(f"{archive_path.name}: {exc}")
@@ -3458,7 +3465,12 @@ class ThumbnailScraperApp(tk.Tk):
                         else:
                             seen_checksums.add(rom_info.checksum)
                             save_data, omitted_rtc = strip_mbc3_rtc_trailer(
-                                save_path.read_bytes(), rom_info
+                                read_bounded_bytes(
+                                    save_path,
+                                    MAX_SAVE_SIZE + FLASHGBX_MBC3_RTC_SIZE,
+                                    "The SAV file",
+                                ),
+                                rom_info,
                             )
                             rtc_metadata_omitted |= omitted_rtc
                             saves.append(
@@ -3495,13 +3507,15 @@ class ThumbnailScraperApp(tk.Tk):
                 )
                 archive = (
                     merge_goomba_archive(
-                        destination.read_bytes(), saves, gameboy_mode
+                        read_bounded_bytes(destination, ARCHIVE_SIZE, "The ESV archive"),
+                        saves,
+                        gameboy_mode,
                     )
                     if destination.exists()
                     else build_goomba_archive(saves, gameboy_mode)
                 )
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                destination.write_bytes(archive)
+                write_bytes_atomically(destination, archive)
                 status = f"Added {len(saves)} selected save(s) to {destination.name}."
                 if rtc_metadata_omitted:
                     status += (

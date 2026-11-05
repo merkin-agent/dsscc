@@ -17,9 +17,11 @@ from goomba_save_converter import (
     lzo1x_literal_compress,
     match_save_to_rom_info,
     merge_goomba_archive,
+    read_bounded_bytes,
     rom_checksum,
     scan_gb_rom_index,
     strip_mbc3_rtc_trailer,
+    write_bytes_atomically,
 )
 
 
@@ -36,6 +38,25 @@ def config_misc_byte(archive):
 
 
 class GoombaSaveConverterTests(unittest.TestCase):
+    def test_bounded_file_read_stops_at_limit_plus_one(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "oversized.sav"
+            with path.open("wb") as output:
+                output.truncate(1025)
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("Unbounded read used")):
+                with self.assertRaisesRegex(ValueError, "supported 1024-byte limit"):
+                    read_bounded_bytes(path, 1024, "The SAV file")
+
+    def test_atomic_archive_write_preserves_existing_file_if_replace_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            destination = Path(temp) / "existing.esv"
+            destination.write_bytes(b"original archive")
+            with patch.object(Path, "replace", side_effect=OSError("simulated replace failure")):
+                with self.assertRaisesRegex(OSError, "simulated replace failure"):
+                    write_bytes_atomically(destination, b"replacement archive")
+            self.assertEqual(destination.read_bytes(), b"original archive")
+            self.assertEqual(list(Path(temp).iterdir()), [destination])
+
     def test_literal_lzo_round_trips_across_extension_boundaries(self):
         for size in (4, 238, 239, 273, 274, 528, 8192, 32768):
             with self.subTest(size=size):
