@@ -89,6 +89,29 @@ class RetailReleasePriorityTests(unittest.TestCase):
 
         self.assertEqual(selected, "Tetris.png")
 
+    def test_sd_libretro_lookup_index_is_reused_for_repeated_rom_searches(self):
+        app = SimpleNamespace()
+        providers = APP_MODULE.Providers(app)
+        source_index = ["Tetris (Beta).png", "Tetris.png", "Zelda.png"]
+        index_reads = []
+
+        def get_index(system, folder):
+            index_reads.append((system, folder))
+            return source_index
+
+        providers.get_libretro_index = get_index
+
+        self.assertEqual(
+            providers.find_libretro_art_name("Tetris (World).gb", "Game Boy", "Named_Boxarts"),
+            "Tetris.png",
+        )
+        self.assertEqual(
+            providers.find_libretro_art_name("Zelda (USA).gb", "Game Boy", "Named_Boxarts"),
+            "Zelda.png",
+        )
+
+        self.assertEqual(index_reads, [("Game Boy", "Named_Boxarts")])
+
     def test_thegamesdb_sorts_retail_game_before_beta_before_limit(self):
         with tempfile.TemporaryDirectory() as temp:
             app = SimpleNamespace(base_dir=Path(temp), tgdb_key_var=Value("test-key"))

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Reuse prebuilt Libretro lookup indexes during repeated SD ROM scans.
+
 ## v2.0.5 - Artwork matching and reliability
 
 This build includes the v2.0.4 fixes and follow-up improvements.

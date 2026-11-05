@@ -992,6 +992,9 @@ class Providers:
         self.app = app
         self.libretro_indexes: dict[tuple[str, str], list[str]] = {}
         self.libretro_direct_indexes: dict[tuple, tuple[dict[str, str], list[str]]] = {}
+        self.libretro_sd_indexes: dict[
+            tuple[str, str], tuple[dict[str, str], dict[str, str], list[str]]
+        ] = {}
         self.local_art_index = None
         self.local_art_index_root: Path | None = None
         self.local_art_files: list = []
@@ -1187,19 +1190,25 @@ class Providers:
         return self.libretro_direct_indexes[cache_key]
 
     def find_libretro_art_name(self, query: str, system: str, folder: str) -> str | None:
-        # SD scanning follows the files that are actually installed. Pack-region
-        # preferences must not hide a World, Japan, or other regional ROM here.
-        allowed_index = sorted(
-            self.get_libretro_index(system, folder),
-            key=lambda name: (variant_rank(name), name.casefold()),
-        )
-        literal_index = {Path(name).stem.casefold(): name for name in allowed_index}
-        exact_index: dict[str, str] = {}
-        for name in allowed_index:
-            exact_index.setdefault(normalize_for_match(name), name)
+        # SD scans must not hide installed ROMs using pack-region preferences.
+        cache_key = (system.casefold(), folder.casefold())
+        if cache_key not in self.libretro_sd_indexes:
+            allowed_index = sorted(
+                self.get_libretro_index(system, folder),
+                key=lambda name: (variant_rank(name), name.casefold()),
+            )
+            literal_index = {Path(name).stem.casefold(): name for name in allowed_index}
+            exact_index: dict[str, str] = {}
+            for name in allowed_index:
+                exact_index.setdefault(normalize_for_match(name), name)
+            self.libretro_sd_indexes[cache_key] = (
+                literal_index,
+                exact_index,
+                allowed_index,
+            )
+        literal_index, exact_index, allowed_index = self.libretro_sd_indexes[cache_key]
         exact_literal = literal_index.get(Path(query).stem.casefold())
-        # An exact beta/prototype/hack filename should not defeat an available
-        # retail artwork file with the same normalized game title.
+        # Prefer retail art over an exact beta/prototype/hack filename.
         if exact_literal and variant_rank(exact_literal) == 0:
             return exact_literal
         exact = exact_index.get(normalize_for_match(query)) or exact_literal
