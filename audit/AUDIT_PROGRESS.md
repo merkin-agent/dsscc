@@ -457,3 +457,37 @@
 **Validation:** Full offline suite — 164 passed; Python compilation and `git diff --check` passed. The working tree now contains only audit-document corrections. The new product commit is local and not yet pushed.
 
 **Next action:** Commit the audit-doc correction separately, push both to `origin/main`, verify the remote, then continue cache and provider-error review.
+
+## 2026-11-05 14:19 UTC — Cache and provider error-path review
+
+**Objective:** Examine cache identity/expiry/eviction and verify whether provider failures are hidden or surfaced.
+
+**Cache evidence:** `sd_scan_rom_cache_path()` keys by case-folded source folder, system, and relative ROM path, without ROM content or file metadata. Replacing a ROM in place at the same path will reuse the prior artwork; this is a **Likely stale-cache defect (low-to-medium)** when the replacement represents a different revision/title. `sd_scan_cache_path()` is keyed by provider/source, system, and art name, so updates to a remote asset under the same name also remain stale. `load_libretro_source_index()` loads a valid cached index indefinitely (`refresh=False` in its only production caller); no age/size eviction or UI clear/refresh action was found for the artwork or index caches. Cache writes are atomic and unique-temp-file based, so concurrent instances do not share staging names. Misses are not negative-cached.
+
+**Provider failure evidence:** `search_fallback_many()` accumulates per-provider errors and raises a summary when exhausted. The SD scan records unmatched diagnostics and `download_errors`; `show_sd_scan_results()` writes a local report and redacts common credential query fields. Libretro download failure offers fallback/skip. No further error-swallowing defect was verified in the reviewed paths; optional local-pack lookup intentionally degrades to online search.
+
+**Packaging evidence:** `build.ps1` installs `requirements.txt` plus PyInstaller and runs the `.spec`; the release workflow builds only on Windows/Python 3.12 and creates a zip. This Linux environment cannot validate the Windows executable; PyInstaller is not installed. No live release/tag action was performed.
+
+**New tightly coupled robustness issue:** `write_bytes_atomically()` currently includes the entire destination name in the temporary-file prefix. A valid near-maximum-length destination component can make the temporary component exceed filesystem limits. Change the prefix to a short fixed value and add a long-name regression test before the next commit.
+
+**Next action:** Fix and test the temporary-name length edge; keep the cache refresh/eviction policy as an explicit open decision rather than guessing at retention behavior.
+
+## 2026-11-05 14:20 UTC — Atomic-writer long-name edge closed
+
+**Finding:** **Verified regression risk (low, confidence 9/10):** deriving the temporary filename prefix from the destination basename could exceed filesystem component limits for otherwise valid long `.esv` names.
+
+**Fix/regression coverage:** `write_bytes_atomically()` now uses a short fixed `.dsscc-` staging prefix. Added a 249-character destination-name test; it succeeds where the old prefix plus tempfile random suffix could exceed a 255-character component.
+
+**Validation:** Focused Goomba tests — 21 passed. Full `python -m unittest discover -s tests -v` — 165 passed. Compilation and `git diff --check` passed.
+
+**State:** Product code/test changes are uncommitted; audit docs are also modified. Keep them separate. No real save files were used.
+
+**Next action:** Commit the atomic-writer follow-up, update/commit audit docs separately, then continue review of cache limitations and remaining branch changes.
+
+## 2026-11-05 14:20 UTC — Atomic-writer follow-up committed
+
+**Milestone:** The fixed-length temporary-name prefix and long-destination regression test were committed as `9cf9aab` (`Use short atomic save staging names`). The working tree contains only audit-doc updates; the product commit is local and not yet pushed.
+
+**Validation:** Focused Goomba tests — 21 passed; full offline suite — 165 passed; compile and whitespace checks passed.
+
+**Next action:** Commit the audit docs separately, push both to `origin/main`, verify, then continue the adversarial audit.
