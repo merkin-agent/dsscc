@@ -56,7 +56,7 @@ class HashProviderTests(unittest.TestCase):
                 "data": {"games": [{"id": 44, "game_title": "Tetris", "platform": 18}]},
                 "include": {
                     "boxart": {
-                        "base_url": {"original": "https://cdn.example/"},
+                        "base_url": {"original": "https://cdn.thegamesdb.net/"},
                         "data": {"44": [{"side": "front", "filename": "/images/tetris-front.png"}]},
                     }
                 },
@@ -99,7 +99,7 @@ class HashProviderTests(unittest.TestCase):
                     "data": {"games": [{"id": 44, "game_title": "Tetris"}]},
                     "include": {
                         "boxart": {
-                            "base_url": {"original": "https://cdn.example/"},
+                            "base_url": {"original": "https://cdn.thegamesdb.net/"},
                             "data": {"44": [{"side": "front", "filename": "/images/front.png"}]},
                         }
                     },
@@ -127,7 +127,7 @@ class HashProviderTests(unittest.TestCase):
                     "jeu": {
                         "id": "44",
                         "nom": "Tetris",
-                        "medias": {"media": [{"type": "box-2D", "url": "https://cdn.example/tetris.png"}]},
+                        "medias": {"media": [{"type": "box-2D", "url": "https://www.screenscraper.fr/tetris.png"}]},
                     }
                 }
             }

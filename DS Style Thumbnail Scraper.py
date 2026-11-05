@@ -393,6 +393,46 @@ WEB_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 MAX_REMOTE_IMAGE_BYTES = 25 * 1024 * 1024
+MAX_PROVIDER_JSON_BYTES = 10 * 1024 * 1024
+PROVIDER_IMAGE_DOMAINS = {
+    "IGDB": ("images.igdb.com",),
+    "TheGamesDB": ("thegamesdb.net",),
+    "ScreenScraper": ("screenscraper.fr",),
+}
+
+
+def _validate_provider_image_url(url: str, provider: str) -> None:
+    allowed_domains = PROVIDER_IMAGE_DOMAINS.get(provider)
+    if allowed_domains is None:
+        raise ValueError(f"Image downloads are not enabled for provider {provider!r}.")
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        hostname = (parsed.hostname or "").casefold().rstrip(".")
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("The provider returned an invalid image URL.") from exc
+    if (
+        parsed.scheme.casefold() != "https"
+        or not hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or port not in (None, 443)
+        or not any(
+            hostname == domain or hostname.endswith(f".{domain}")
+            for domain in allowed_domains
+        )
+    ):
+        raise ValueError("The provider returned an image URL outside its approved HTTPS hosts.")
+
+
+class _ProviderImageRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def __init__(self, provider: str):
+        super().__init__()
+        self.provider = provider
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _validate_provider_image_url(newurl, self.provider)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 def libretro_repo(system: str) -> str:
@@ -420,10 +460,18 @@ def libretro_source_cache_path(base_dir: Path, folder: str, system: str = DEFAUL
     return base_dir / CACHE_FOLDER_NAME / filename
 
 
+def _read_provider_json_response(response) -> object:
+    data = response.read(MAX_PROVIDER_JSON_BYTES + 1)
+    if len(data) > MAX_PROVIDER_JSON_BYTES:
+        raise ValueError("The provider JSON response exceeds the 10 MiB limit.")
+    return json.loads(data.decode("utf-8", errors="replace"))
+
+
 def request_json(url: str, headers: dict[str, str] | None = None) -> dict:
     request = urllib.request.Request(url, headers=headers or WEB_HEADERS)
     try:
-        return json.loads(urllib.request.urlopen(request, timeout=30).read().decode("utf-8", errors="replace"))
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return _read_provider_json_response(response)
     except urllib.error.HTTPError as exc:
         if exc.code == 403:
             raise LookupError("The provider refused the request (403 Forbidden). Check the account/API key, and try again later if the service is rate-limiting.") from exc
@@ -473,7 +521,8 @@ def format_hash_lookup_error_lines(unmatched_games: list[dict], detail_limit: in
 def post_json(url: str, body: str, headers: dict[str, str]) -> list | dict:
     request = urllib.request.Request(url, data=body.encode("utf-8"), headers=headers, method="POST")
     try:
-        return json.loads(urllib.request.urlopen(request, timeout=30).read().decode("utf-8", errors="replace"))
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return _read_provider_json_response(response)
     except urllib.error.HTTPError as exc:
         if exc.code == 403:
             raise LookupError("The provider refused the request (403 Forbidden). Check the account/API key, and try again later if the service is rate-limiting.") from exc
@@ -493,7 +542,8 @@ def post_form_json(url: str, fields: dict[str, str]) -> dict:
         method="POST",
     )
     try:
-        payload = json.loads(urllib.request.urlopen(request, timeout=30).read().decode("utf-8", errors="replace"))
+        with urllib.request.urlopen(request, timeout=30) as response:
+            payload = _read_provider_json_response(response)
     except urllib.error.HTTPError as exc:
         if exc.code in (400, 401, 403):
             raise LookupError("The authentication service rejected the credentials. Check the Client ID and Client Secret.") from exc
@@ -503,10 +553,12 @@ def post_form_json(url: str, fields: dict[str, str]) -> dict:
     return payload
 
 
-def fetch_bytes(url: str, headers: dict[str, str] | None = None) -> bytes:
+def fetch_bytes(url: str, provider: str, headers: dict[str, str] | None = None) -> bytes:
+    _validate_provider_image_url(url, provider)
     request = urllib.request.Request(url, headers=headers or WEB_HEADERS)
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        opener = urllib.request.build_opener(_ProviderImageRedirectHandler(provider))
+        with opener.open(request, timeout=30) as response:
             data = response.read(MAX_REMOTE_IMAGE_BYTES + 1)
         if len(data) > MAX_REMOTE_IMAGE_BYTES:
             raise ValueError("The image response exceeds the 25 MiB download limit.")
@@ -1600,7 +1652,7 @@ class Providers:
             for image_id in image_ids[:5]:
                 url = f"https://images.igdb.com/igdb/image/upload/t_720p/{image_id}.jpg"
                 try:
-                    image_data = fetch_bytes(url)
+                    image_data = fetch_bytes(url, provider="IGDB")
                     if not is_valid_image_data(image_data):
                         continue
                 except Exception:
@@ -1780,7 +1832,7 @@ class Providers:
                 else:
                     image_url = urllib.parse.urljoin(base, image_path.lstrip("/"))
                 try:
-                    image_data = fetch_bytes(image_url)
+                    image_data = fetch_bytes(image_url, provider="TheGamesDB")
                     if not is_valid_image_data(image_data):
                         continue
                 except Exception:
@@ -1865,7 +1917,7 @@ class Providers:
                         else:
                             image_url = urllib.parse.urljoin(base, image_path.lstrip("/"))
                         try:
-                            image_data = fetch_bytes(image_url)
+                            image_data = fetch_bytes(image_url, provider="TheGamesDB")
                             if not is_valid_image_data(image_data):
                                 continue
                         except Exception:
@@ -2025,7 +2077,7 @@ class Providers:
                     if not isinstance(media, dict) or media.get("type") != preferred or not media.get("url"):
                         continue
                     try:
-                        image_data = fetch_bytes(str(media["url"]))
+                        image_data = fetch_bytes(str(media["url"]), provider="ScreenScraper")
                         if not is_valid_image_data(image_data):
                             continue
                     except Exception:
@@ -2090,7 +2142,7 @@ class Providers:
                     if not isinstance(media, dict) or media.get("type") != preferred or not media.get("url"):
                         continue
                     try:
-                        image_data = fetch_bytes(str(media["url"]))
+                        image_data = fetch_bytes(str(media["url"]), provider="ScreenScraper")
                         if not is_valid_image_data(image_data):
                             continue
                     except Exception:

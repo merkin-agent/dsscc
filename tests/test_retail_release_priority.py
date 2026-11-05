@@ -103,7 +103,7 @@ class RetailReleasePriorityTests(unittest.TestCase):
                 },
                 "include": {
                     "boxart": {
-                        "base_url": {"original": "https://cdn.example/"},
+                        "base_url": {"original": "https://cdn.thegamesdb.net/"},
                         "data": {
                             "1": [{"filename": "front/beta.png", "side": "front"}],
                             "2": [{"filename": "front/retail.png", "side": "front"}],
@@ -117,7 +117,9 @@ class RetailReleasePriorityTests(unittest.TestCase):
                 results = providers.search_thegamesdb_many("Tetris", max_results=1, system="Game Boy")
             self.assertEqual(len(results), 1)
             self.assertIn("Tetris - retail.png", results[0].label)
-            fetch.assert_called_once_with("https://cdn.example/front/retail.png")
+            fetch.assert_called_once_with(
+                "https://cdn.thegamesdb.net/front/retail.png", provider="TheGamesDB"
+            )
 
     def test_screenscraper_sorts_retail_game_before_proto_before_limit(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -129,8 +131,8 @@ class RetailReleasePriorityTests(unittest.TestCase):
                 "response": {
                     "jeux": {
                         "jeu": [
-                            {"nom": "Tetris (Proto)", "medias": {"media": [{"type": "box-2D", "url": "https://cdn.example/proto.png"}]}},
-                            {"nom": "Tetris", "medias": {"media": [{"type": "box-2D", "url": "https://cdn.example/retail.png"}]}},
+                            {"nom": "Tetris (Proto)", "medias": {"media": [{"type": "box-2D", "url": "https://www.screenscraper.fr/proto.png"}]}},
+                            {"nom": "Tetris", "medias": {"media": [{"type": "box-2D", "url": "https://www.screenscraper.fr/retail.png"}]}},
                         ]
                     }
                 }
@@ -141,7 +143,9 @@ class RetailReleasePriorityTests(unittest.TestCase):
                 results = providers.search_screenscraper_many("Tetris", max_results=1, system="Game Boy")
             self.assertEqual(len(results), 1)
             self.assertTrue(results[0].label.startswith("Tetris -"))
-            fetch.assert_called_once_with("https://cdn.example/retail.png")
+            fetch.assert_called_once_with(
+                "https://www.screenscraper.fr/retail.png", provider="ScreenScraper"
+            )
 
     def test_igdb_sorts_retail_game_before_hack_before_limit(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -159,7 +163,10 @@ class RetailReleasePriorityTests(unittest.TestCase):
                 results = providers.search_igdb_many("Tetris", max_results=1, system="Game Boy")
             self.assertEqual(len(results), 1)
             self.assertTrue(results[0].label.startswith("Tetris -"))
-            fetch.assert_called_once_with("https://images.igdb.com/igdb/image/upload/t_720p/retail.jpg")
+            fetch.assert_called_once_with(
+                "https://images.igdb.com/igdb/image/upload/t_720p/retail.jpg",
+                provider="IGDB",
+            )
 
 
 if __name__ == "__main__":

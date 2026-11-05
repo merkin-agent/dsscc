@@ -99,7 +99,7 @@ class TheGamesDbFallbackTests(unittest.TestCase):
                         "data": {"games": [{"id": 7, "game_title": "Tetris", "platform": 42}]},
                         "include": {
                             "boxart": {
-                                "base_url": {"original": "https://cdn.example/images/original/"},
+                                "base_url": {"original": "https://cdn.thegamesdb.net/images/original/"},
                                 "data": {
                                     "7": [
                                         {"filename": "back/7.png", "side": "back"},
@@ -111,7 +111,7 @@ class TheGamesDbFallbackTests(unittest.TestCase):
                     }
                 self.fail(f"Unexpected API URL: {url}")
 
-            def fake_fetch(url, _headers=None):
+            def fake_fetch(url, provider, headers=None):
                 urls.append(url)
                 return image
 
@@ -124,7 +124,7 @@ class TheGamesDbFallbackTests(unittest.TestCase):
             self.assertEqual(results[0].provider, "TheGamesDB")
             self.assertEqual(results[0].system, "Game Boy")
             self.assertTrue(results[0].label.endswith("7.png"))
-            self.assertEqual(urls, ["https://cdn.example/images/original/front/7.png"])
+            self.assertEqual(urls, ["https://cdn.thegamesdb.net/images/original/front/7.png"])
 
     def test_thegamesdb_absolute_path_filename_is_resolved_without_duplicate_prefix(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -143,14 +143,14 @@ class TheGamesDbFallbackTests(unittest.TestCase):
                         "data": {"games": [{"id": 7, "game_title": "Tetris", "platform": 42}]},
                         "include": {
                             "boxart": {
-                                "base_url": {"original": "https://cdn.example/images/original/"},
+                                "base_url": {"original": "https://cdn.thegamesdb.net/images/original/"},
                                 "data": {"7": [{"filename": "/images/original/boxart/front/7.png", "side": "front"}]},
                             }
                         },
                     }
                 self.fail(f"Unexpected API URL: {url}")
 
-            def fake_fetch(url, _headers=None):
+            def fake_fetch(url, provider, headers=None):
                 urls.append(url)
                 return image
 
@@ -160,7 +160,7 @@ class TheGamesDbFallbackTests(unittest.TestCase):
                 results = providers.search_thegamesdb_many("Tetris", max_results=1, system="Game Boy")
 
             self.assertEqual(len(results), 1)
-            self.assertEqual(urls, ["https://cdn.example/images/original/boxart/front/7.png"])
+            self.assertEqual(urls, ["https://cdn.thegamesdb.net/images/original/boxart/front/7.png"])
 
     def test_thegamesdb_platform_cache_is_used(self):
         with tempfile.TemporaryDirectory() as temp:

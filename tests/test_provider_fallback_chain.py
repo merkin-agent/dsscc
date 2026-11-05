@@ -49,19 +49,96 @@ def make_provider_app(tmp_path):
 
 
 class ProviderFallbackChainTests(unittest.TestCase):
+    def test_request_json_reads_and_closes_a_bounded_response(self):
+        response = Mock()
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        response.read.return_value = b'{"ok": true}'
+
+        with patch.object(APP_MODULE.urllib.request, "urlopen", return_value=response):
+            payload = APP_MODULE.request_json("https://api.example/data")
+
+        self.assertEqual(payload, {"ok": True})
+        response.read.assert_called_once_with(APP_MODULE.MAX_PROVIDER_JSON_BYTES + 1)
+        response.__exit__.assert_called_once()
+
+    def test_json_provider_helpers_cap_response_size(self):
+        requests = (
+            (APP_MODULE.request_json, ("https://api.example/data",)),
+            (APP_MODULE.post_json, ("https://api.example/data", "{}", {})),
+            (APP_MODULE.post_form_json, ("https://api.example/token", {"grant_type": "client_credentials"})),
+        )
+        for request_method, args in requests:
+            with self.subTest(method=request_method.__name__):
+                response = Mock()
+                response.__enter__ = Mock(return_value=response)
+                response.__exit__ = Mock(return_value=False)
+                response.read.return_value = b"x" * 9
+                with patch.object(APP_MODULE, "MAX_PROVIDER_JSON_BYTES", 8), patch.object(
+                    APP_MODULE.urllib.request, "urlopen", return_value=response
+                ):
+                    with self.assertRaisesRegex(ValueError, "exceeds the 10 MiB limit"):
+                        request_method(*args)
+                response.read.assert_called_once_with(9)
+
     def test_fetch_bytes_caps_download_size(self):
         response = Mock()
         response.__enter__ = Mock(return_value=response)
         response.__exit__ = Mock(return_value=False)
         response.read.return_value = b"x" * 9
+        opener = Mock()
+        opener.open.return_value = response
 
         with patch.object(APP_MODULE, "MAX_REMOTE_IMAGE_BYTES", 8), patch.object(
-            APP_MODULE.urllib.request, "urlopen", return_value=response
+            APP_MODULE.urllib.request, "build_opener", return_value=opener
         ):
             with self.assertRaisesRegex(ValueError, "exceeds the 25 MiB download limit"):
-                APP_MODULE.fetch_bytes("https://images.example/art.png")
+                APP_MODULE.fetch_bytes("https://cdn.thegamesdb.net/art.png", provider="TheGamesDB")
 
         response.read.assert_called_once_with(9)
+
+    def test_fetch_bytes_rejects_unapproved_hosts_and_schemes_before_network(self):
+        unsafe_urls = (
+            "http://cdn.thegamesdb.net/art.png",
+            "https://127.0.0.1/art.png",
+            "https://images.example/art.png",
+            "https://user@cdn.thegamesdb.net/art.png",
+            "https://cdn.thegamesdb.net:8443/art.png",
+        )
+        with patch.object(APP_MODULE.urllib.request, "build_opener") as build_opener:
+            for url in unsafe_urls:
+                with self.subTest(url=url), self.assertRaises(ValueError):
+                    APP_MODULE.fetch_bytes(url, provider="TheGamesDB")
+        build_opener.assert_not_called()
+
+    def test_image_redirect_rejects_unapproved_destination(self):
+        handler = APP_MODULE._ProviderImageRedirectHandler("TheGamesDB")
+        request = APP_MODULE.urllib.request.Request("https://cdn.thegamesdb.net/art.png")
+
+        with self.assertRaisesRegex(ValueError, "outside its approved HTTPS hosts"):
+            handler.redirect_request(
+                request,
+                None,
+                302,
+                "Found",
+                {},
+                "http://127.0.0.1/private",
+            )
+
+    def test_image_redirect_allows_approved_https_cdn_subdomain(self):
+        handler = APP_MODULE._ProviderImageRedirectHandler("TheGamesDB")
+        request = APP_MODULE.urllib.request.Request("https://cdn.thegamesdb.net/art.png")
+
+        redirected = handler.redirect_request(
+            request,
+            None,
+            302,
+            "Found",
+            {},
+            "https://images.cdn.thegamesdb.net/art.png",
+        )
+
+        self.assertEqual(redirected.full_url, "https://images.cdn.thegamesdb.net/art.png")
 
     def test_chain_order_is_tgdb_then_screenscraper_then_igdb(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -152,8 +229,8 @@ class ProviderFallbackChainTests(unittest.TestCase):
                                     "nom": "Tetris",
                                     "medias": {
                                         "media": [
-                                            {"type": "box-2D", "url": "https://cdn.example/bad.png"},
-                                            {"type": "box-3D", "url": "https://cdn.example/good.png"},
+                                            {"type": "box-2D", "url": "https://www.screenscraper.fr/bad.png"},
+                                            {"type": "box-3D", "url": "https://www.screenscraper.fr/good.png"},
                                         ]
                                     },
                                 }
@@ -162,7 +239,7 @@ class ProviderFallbackChainTests(unittest.TestCase):
                     }
                 raise AssertionError(f"Unexpected ScreenScraper URL: {url}")
 
-            def fake_fetch(url, _headers=None):
+            def fake_fetch(url, provider, headers=None):
                 requested_urls.append(url)
                 if url.endswith("bad.png"):
                     return b"not an image"
@@ -176,7 +253,7 @@ class ProviderFallbackChainTests(unittest.TestCase):
             self.assertEqual(len(results), 1)
             self.assertEqual(results[0].provider, "ScreenScraper")
             self.assertEqual(results[0].system, "Game Boy")
-            self.assertEqual(requested_urls, ["https://cdn.example/bad.png", "https://cdn.example/good.png"])
+            self.assertEqual(requested_urls, ["https://www.screenscraper.fr/bad.png", "https://www.screenscraper.fr/good.png"])
 
     def test_screen_scraper_requires_developer_credentials_but_user_credentials_are_optional(self):
         with tempfile.TemporaryDirectory() as temp:
