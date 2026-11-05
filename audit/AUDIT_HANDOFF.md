@@ -8,13 +8,13 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 
 ## B. Repository state
 
-- Branch: `feature/mirrored-artwork-retry-cache`, local `HEAD` at `48b1ee3` (`Document artwork audit findings and handoff`); remote feature ref remains at `8e95eb2`.
-- Working tree: clean; five product commits and one docs-only audit commit ahead of `origin`. No changes were pushed yet.
+- Branch: `feature/mirrored-artwork-retry-cache`, local `HEAD` at `5734bfe` (`Record pre-push audit checkpoint`), pushed to `origin` at the same commit.
+- Working tree: clean before this documentation update; five product commits and two docs-only audit commits are on `origin`. `origin/main` remains at `98fed08`.
 - Remotes: `origin` points to `merkin-agent/dsscc`; `upstream` points to `voluptuary/dsscc`. Both default branches are `main`, and both fetched `main` refs are identical at `98fed08d617b982b58d62c1bb9c2b4488b5ac8be`. Both remotes also have the feature branch at the audit HEAD (`8e95eb2`).
 - Divergence: HEAD is 34 commits ahead and zero behind both default branches, with the same merge base `98fed08`.
 - Baseline: `python -m unittest discover -s tests -v` passed 147 tests; targeted `py_compile` passed. Python 3.14.2 and Pillow 13.0.0 are installed. PyInstaller is absent; the documented Windows build is not yet attempted.
 - Latest validation: after the kernel-compatible thumbnail reuse fix, the full offline suite passes 155 tests; focused SD/cache/local-pack tests pass (30 tests), targeted compilation and `git diff --check` pass.
-- Product commits, local only and unpushed: `8dd05f2` per-size CUSTOM limits; `337a573` atomic cache writes; `c364816` provider byte and image pixel bounds; `c90562e` Libretro HTTP response bound; `ac25553` kernel-compatible existing-thumbnail validation. Audit documents are committed separately as docs-only commit `48b1ee3`.
+- Product commits: `8dd05f2` per-size CUSTOM limits; `337a573` atomic cache writes; `c364816` provider byte and image pixel bounds; `c90562e` Libretro HTTP response bound; `ac25553` kernel-compatible existing-thumbnail validation. Audit documents are committed separately as docs-only commits `48b1ee3` and `5734bfe`.
 
 ## C. Audit state
 
@@ -41,7 +41,8 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 2. Determine whether the original-Omega variant is in scope and, if so, use its kernel source as a separate model comparison; do not assume DE support proves original support.
 3. Decide/document a cache eviction or clear policy for `SD scan artwork` and `SD scan ROM artwork`; inspect actual cache-path callers and provide actionable UI or user guidance if appropriate.
 4. Continue remaining branch-diff review, particularly local-pack matching, save conversion, and Windows release packaging; test any confirmed defects offline.
-5. Push the five validated code commits and docs-only audit commit `48b1ee3` only to `origin`, then verify remote state. Never push upstream.
+5. Create a PR from this pushed feature branch to `main`; wait for and verify all required checks/reviews. Merge only through the permitted GitHub workflow (no protection bypass).
+6. After confirming the PR is fully merged, update/check out `main`, verify its commit contains the merge, then delete the local and fork feature branch. Do not delete the branch before merge verification; never touch upstream.
 
 ## E. Validation and tooling
 
@@ -50,6 +51,7 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 - Primary compatibility reference: `https://github.com/voluptuary/ezfode-dssmm-kernel`, cloned at `/tmp/audit-voluptuary-ezfode`; head at inspection `cff477969bc501548497e7be8dab9e3b445ba987`, README reports v8.2.0. Its README documents 120×80 title / 80×80 box, top-down 16-bit BMP, `DST1` marker, and mirrored lookup.
 - Secondary comparison only: `https://github.com/FrankieT19/omega-de-ds-style-kernel` / `omega-ds-style-kernel`; not the primary contract for this adapted version.
 - Tests: `python -m unittest discover -s tests -v`; compile check as above. Kernel build and hardware behavior are not validated by this host-side DSSCC audit.
+- Merge note: branch-protection API inspection returned HTTP 403 (token lacks administration:read); protection status is unknown. Use a PR and do not bypass protections.
 
 ## F. Operational constraints
 

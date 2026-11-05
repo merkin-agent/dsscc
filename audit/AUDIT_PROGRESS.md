@@ -202,6 +202,18 @@
 
 **Next operation:** `git push origin feature/mirrored-artwork-retry-cache`, then verify `origin/feature/mirrored-artwork-retry-cache` points at the resulting local HEAD. If credentials or policy block the push, record that exact result; do not retry against upstream.
 
+## 2026-11-05 14:35 UTC — Feature branch published; merge route checked
+
+**Objective:** Publish validated work to the fork and prepare the requested merge to its default branch without bypassing protections.
+
+**GitHub operations:** `git push origin feature/mirrored-artwork-retry-cache` succeeded; remote feature ref is `5734bfeb97722949808e59a8448536a2fbcec624`. `git fetch origin` confirmed `origin/main` at `98fed08d617b982b58d62c1bb9c2b4488b5ac8be` and the feature branch has the same merge base. `gh pr list` found no existing PR. Branch-protection query returned HTTP 403 because the token lacks `administration:read`; protection status therefore remains unknown.
+
+**Merge constraints:** Use a PR to merge to fork `main`; do not attempt to bypass protection. Delete the feature branch only after GitHub confirms the complete merge and `main` contains it. Do not push to upstream.
+
+**Current scope qualification:** The audit has source-level Voluptuary kernel contract research, five verified fixes, focused provider/cache/image checks, and 155 passing offline tests. The full 34-commit feature diff has not been exhaustively reviewed line-by-line. Remaining uncertainties are documented in the handoff; do not represent the audit as exhaustive.
+
+**Next action:** Commit this docs-only status update, push it to the feature branch, create the PR to `main`, and merge only after required checks/reviews pass.
+
 ## 2026-11-05 13:52 UTC — Cache reliability; concurrent staging collision
 
 **Objective:** Verify cache persistence behavior when separate app instances share the same user cache directory.
