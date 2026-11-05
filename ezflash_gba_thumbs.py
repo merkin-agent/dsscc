@@ -32,6 +32,7 @@ GBA_TITLE_OFFSET = 0xA0
 GBA_TITLE_LEN = 12
 GBA_CODE_OFFSET = 0xAC
 GBA_CODE_LEN = 4
+MAX_HTTP_RESPONSE_BYTES = 25 * 1024 * 1024
 
 
 def positive_dimension(value: str) -> int:
@@ -107,7 +108,10 @@ def http_get(url: str) -> bytes:
         },
     )
     with urllib.request.urlopen(request, timeout=30) as response:
-        return response.read()
+        data = response.read(MAX_HTTP_RESPONSE_BYTES + 1)
+    if len(data) > MAX_HTTP_RESPONSE_BYTES:
+        raise ValueError("The HTTP response exceeds the 25 MiB download limit.")
+    return data
 
 
 def load_libretro_index(cache_path: Path, refresh: bool = False) -> list[str]:
