@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.0.5 - Artwork matching and reliability
+
+This build includes the v2.0.4 fixes and follow-up improvements.
+
+### New fixes since v2.0.4
+
+- Preserved meaningful bracketed title text when matching ROMs to local and online artwork.
+- Enforced DS Style CUSTOM artwork folder limits independently for title and box-art images.
+- Validated reused SD thumbnails against the kernel-compatible BMP format.
+- Bounded image, provider-response, local-artwork, and Goomba save/archive reads; Goomba output files are replaced atomically.
+- Restricted provider artwork downloads and redirects to approved HTTPS hosts.
+- Made concurrent artwork-cache writes safe and bounded Game Boy ROM indexing to the bytes it needs.
+
 ## v2.0.4 - GB/GBC emulator mode detection
 
 This build includes the v2.0.3 fixes and follow-up improvements.

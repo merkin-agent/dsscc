@@ -66,7 +66,7 @@ from ezflash_gba_thumbs import (
 
 
 APP_NAME = "DS Style Card Companion"
-APP_VERSION = "2.0.4"
+APP_VERSION = "2.0.5"
 OUTPUT_FOLDER_NAME = "DS Style Card Companion Output"
 THUMBNAIL_PACKS_FOLDER_NAME = "Thumbnail Packs"
 CACHE_FOLDER_NAME = "DS Style Thumbnail Scraper Cache"

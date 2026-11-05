@@ -26,6 +26,12 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path 'dist\DS Style Card Companion.exe' -DestinationPath 'DS.Style.Card.Companion.zip' -Force
 
+      - name: Package source code
+        shell: pwsh
+        run: |
+          git archive --format=zip --output=DS.Style.Card.Companion.Source.zip $env:GITHUB_REF_NAME -- . ':(exclude)audit'
+          if ($LASTEXITCODE -ne 0) { throw "Could not package source code." }
+
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -44,8 +50,8 @@ jobs:
           if ($releaseExists) {
             gh release edit $tag --repo $env:GITHUB_REPOSITORY --title "DS Style Card Companion $tag" --notes-file $notesPath
             if ($LASTEXITCODE -ne 0) { throw "Could not update release notes for $tag." }
-            gh release upload $tag --repo $env:GITHUB_REPOSITORY --clobber "DS.Style.Card.Companion.zip"
+            gh release upload $tag --repo $env:GITHUB_REPOSITORY --clobber "DS.Style.Card.Companion.zip" "DS.Style.Card.Companion.Source.zip"
           } else {
-            gh release create $tag --repo $env:GITHUB_REPOSITORY --title "DS Style Card Companion $tag" --notes-file $notesPath "DS.Style.Card.Companion.zip"
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --title "DS Style Card Companion $tag" --notes-file $notesPath "DS.Style.Card.Companion.zip" "DS.Style.Card.Companion.Source.zip"
           }
           if ($LASTEXITCODE -ne 0) { throw "Could not publish release asset for $tag." }
