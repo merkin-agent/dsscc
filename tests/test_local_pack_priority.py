@@ -11,6 +11,8 @@ from unittest.mock import Mock
 
 from PIL import Image
 
+from ezflash_gba_thumbs import write_ezflash_bmp
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = PROJECT_ROOT / "DS Style Thumbnail Scraper.py"
 SPEC = importlib.util.spec_from_file_location("thumbnail_scraper_local_pack_priority_test", APP_PATH)
@@ -147,8 +149,9 @@ class LocalPackPriorityTests(unittest.TestCase):
             stale_cache.write_bytes(png_bytes((200, 10, 10)))
             old_output = sd_root / "SYSTEM" / "IMGS2" / "Game Boy" / "T"
             old_output.mkdir(parents=True)
-            Image.new("RGB", (80, 80), (200, 10, 10)).save(
-                old_output / "Tetris (USA) (Rev 1) [!].bmp", format="BMP"
+            write_ezflash_bmp(
+                Image.new("RGB", (80, 80), (200, 10, 10)),
+                old_output / "Tetris (USA) (Rev 1) [!].bmp",
             )
 
             class ScanProviders:

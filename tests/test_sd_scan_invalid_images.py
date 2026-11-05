@@ -11,6 +11,8 @@ from unittest.mock import Mock, patch
 
 from PIL import Image
 
+from ezflash_gba_thumbs import write_ezflash_bmp
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = PROJECT_ROOT / "DS Style Thumbnail Scraper.py"
 SPEC = importlib.util.spec_from_file_location("thumbnail_scraper_scan_test", APP_PATH)
@@ -261,7 +263,7 @@ class SdScanInvalidImageTests(unittest.TestCase):
             make_rom(root, "Already There")
             existing = root / "SYSTEM" / "IMGS2" / "Game Boy" / "A" / "Already There.bmp"
             existing.parent.mkdir(parents=True, exist_ok=True)
-            Image.new("RGB", (80, 80), (40, 90, 120)).save(existing, format="BMP")
+            write_ezflash_bmp(Image.new("RGB", (80, 80), (40, 90, 120)), existing)
 
             app, prompts = make_app(Path(temp) / "app")
             app.providers.find_libretro_art_name = Mock(
@@ -274,6 +276,30 @@ class SdScanInvalidImageTests(unittest.TestCase):
             self.assertEqual(prompts, [])
             self.assertEqual(result["skipped_existing"], 1)
             self.assertEqual(result["additions"], [])
+
+    def test_existing_24_bit_bmp_is_rebuilt_to_match_kernel_format(self):
+        calls = []
+
+        def fake_http_get(url):
+            calls.append(url)
+            return png_bytes((80, 80))
+
+        self.with_mock_downloads(fake_http_get)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "sd"
+            make_rom(root, "Wrong Format")
+            existing = root / "SYSTEM" / "IMGS2" / "Game Boy" / "W" / "Wrong Format.bmp"
+            existing.parent.mkdir(parents=True, exist_ok=True)
+            Image.new("RGB", (80, 80), (40, 90, 120)).save(existing, format="BMP")
+
+            app, _prompts = make_app(Path(temp) / "app")
+            result = app._scan_sd_worker(root, "Box Art", ["80x80"], False)
+
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(result["skipped_existing"], 0)
+            self.assertEqual(len(result["additions"]), 1)
+            output = Path(result["additions"][0].image_path)
+            self.assertNotEqual(output, existing)
 
     def test_legacy_custom_art_cache_is_reused_for_a_new_size(self):
         calls = []
@@ -402,7 +428,7 @@ class SdScanInvalidImageTests(unittest.TestCase):
             old_output = app_dir / APP_MODULE.OUTPUT_FOLDER_NAME / "2026-10-10_12-00-00" / "IMGS"
             existing = old_output / "Game Boy" / "E" / "Earlier Build Game.bmp"
             existing.parent.mkdir(parents=True, exist_ok=True)
-            Image.new("RGB", (120, 80), (60, 100, 120)).save(existing, format="BMP")
+            write_ezflash_bmp(Image.new("RGB", (120, 80), (60, 100, 120)), existing)
 
             app, prompts = make_app(app_dir)
             result = app._scan_sd_worker(root, "Box Art", ["120x80"], False)
@@ -432,7 +458,7 @@ class SdScanInvalidImageTests(unittest.TestCase):
             )
             existing = old_output / "Game Boy" / "L" / "Legacy Output Game.bmp"
             existing.parent.mkdir(parents=True, exist_ok=True)
-            Image.new("RGB", (120, 80), (60, 100, 120)).save(existing, format="BMP")
+            write_ezflash_bmp(Image.new("RGB", (120, 80), (60, 100, 120)), existing)
 
             app, prompts = make_app(app_dir)
             result = app._scan_sd_worker(root, "Box Art", ["120x80"], False)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import struct
 from pathlib import Path
 
 from PIL import Image, UnidentifiedImageError
@@ -65,4 +66,37 @@ def is_valid_image_file(path: str | Path, expected_size: tuple[int, int] | None 
         SyntaxError,
         Image.DecompressionBombError,
     ):
+        return False
+
+
+def is_valid_kernel_thumbnail_file(path: str | Path, expected_size: tuple[int, int]) -> bool:
+    """Return whether a file matches the kernel's uncompressed top-down RGB555 BMP contract."""
+    image_path = Path(path)
+    if not is_valid_image_file(image_path, expected_size):
+        return False
+
+    try:
+        with image_path.open("rb") as image_file:
+            header = image_file.read(54)
+            actual_size = image_path.stat().st_size
+        if len(header) != 54 or header[:2] != b"BM":
+            return False
+
+        file_size, pixel_offset = struct.unpack_from("<IxxxxI", header, 2)
+        dib_size, width, height, planes, bits_per_pixel, compression = struct.unpack_from(
+            "<IiiHHI", header, 14
+        )
+        pixel_data_size = expected_size[0] * expected_size[1] * 2
+        return (
+            dib_size == 40
+            and width == expected_size[0]
+            and height == -expected_size[1]
+            and planes == 1
+            and bits_per_pixel == 16
+            and compression == 0
+            and pixel_offset == 54
+            and file_size >= pixel_offset + pixel_data_size
+            and actual_size >= pixel_offset + pixel_data_size
+        )
+    except (OSError, struct.error, ValueError):
         return False

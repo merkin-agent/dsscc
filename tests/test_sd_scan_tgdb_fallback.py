@@ -10,6 +10,8 @@ from unittest.mock import Mock
 
 from PIL import Image
 
+from ezflash_gba_thumbs import write_ezflash_bmp
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = PROJECT_ROOT / "DS Style Thumbnail Scraper.py"
 SPEC = importlib.util.spec_from_file_location("thumbnail_scraper_sd_tgdb_test", APP_PATH)
@@ -96,7 +98,7 @@ class SdScanTheGamesDbFallbackTests(unittest.TestCase):
             make_rom(root)
             existing = root / "SYSTEM" / "IMGS2" / "Game Boy" / "T" / "Tetris.bmp"
             existing.parent.mkdir(parents=True)
-            Image.new("RGB", (80, 80), (20, 30, 40)).save(existing, format="BMP")
+            write_ezflash_bmp(Image.new("RGB", (80, 80), (20, 30, 40)), existing)
             providers = FallbackProviders()
             app = setup_app(base / "app", providers)
 

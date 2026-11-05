@@ -26,7 +26,11 @@ from PIL import Image, ImageTk
 from ezflash_gba_full_library import load_gba_library
 from ezflash_gba_pack_converter import build_art_index, find_best_art, iter_art_files
 from thumbnail_output_paths import infer_relative_rom_path, mirrored_thumbnail_path, relative_path_from_root
-from thumbnail_image_data import is_valid_image_data, is_valid_image_file
+from thumbnail_image_data import (
+    is_valid_image_data,
+    is_valid_image_file,
+    is_valid_kernel_thumbnail_file,
+)
 from thumbnail_rendering import fit_image_to_canvas, should_fit_art
 from rom_matching import compute_rom_hashes, strip_nointro_tags
 from json_cache import write_json_atomic
@@ -4722,7 +4726,7 @@ class ThumbnailScraperApp(tk.Tk):
             if identity in checked:
                 continue
             checked.add(identity)
-            if is_valid_image_file(candidate, (width, height)):
+            if is_valid_kernel_thumbnail_file(candidate, (width, height)):
                 return candidate
         return None
 
