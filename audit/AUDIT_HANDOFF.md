@@ -8,19 +8,19 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 
 ## B. Repository state
 
-- Branch: `main`, latest local commit `1a5c589` (`Preserve bracketed ROM title text`); not pushed yet. Only audit-doc edits remain uncommitted.
-- Working tree: provider safeguards, bounded local-pack reads, Goomba save-conversion hardening, long-filename-safe atomic writes, and conservative title normalization are committed locally. Prior product commits are pushed; audit docs remain separate from product changes. PR #1 is merged; the feature branch was deleted from local and `origin` only after verifying the merge. Upstream was untouched.
+- Branch: `main`, tracking `origin/main`; product fixes through `1a5c589` and audit docs are committed/pushed in separate commits. Local and remote main were matched at final verification.
+- Working tree: all verified code fixes and audit docs are committed and pushed. Product fixes and docs-only commits remain separate. The fork's feature branch was deleted locally and from `origin` only after merge verification; the separate upstream feature ref remains untouched.
 - Remotes: `origin` points to `merkin-agent/dsscc`; `upstream` points to `voluptuary/dsscc`. Both default branches are `main`, fetched at `98fed08d617b982b58d62c1bb9c2b4488b5ac8be`. `upstream` feature ref remains at `8e95eb2`; do not push there.
 - Divergence: local `main` matches `origin/main`; merge base with the prior feature branch was `98fed08`.
 - Baseline: `python -m unittest discover -s tests -v` passed 147 tests; targeted `py_compile` passed. Python 3.14.2 and Pillow 13.0.0 are installed. PyInstaller is absent; the documented Windows build is not yet attempted.
 - Latest validation: after provider URL/redirect restrictions, bounded JSON responses, local-pack bounds, Goomba save-conversion safeguards, and conservative title normalization, the full offline suite passes 167 tests; focused local-pack/title tests pass (15 tests), targeted compilation and `git diff --check` pass.
-- Product commits: `8dd05f2` per-size CUSTOM limits; `337a573` atomic cache writes; `c364816` provider byte and image pixel bounds; `c90562e` Libretro HTTP response bound; `ac25553` kernel-compatible existing-thumbnail validation; `9a54843` bounded Goomba ROM indexing; `ac5de88` provider URL and JSON response bounds; `7bcb16c` bounded local artwork reads; `1a7cb39` bounded and atomic Goomba save conversion; `7c7c11c` bounded ESV archive padding; `9cf9aab` short atomic staging names; `1a5c589` conservative ROM title normalization. Audit documents are committed separately as docs-only commits `48b1ee3`, `5734bfe`, `25a3b6e`, `6b7f4d0`, `8bea97e`, `472b0de`, and `bb755cb`; this update will also be docs-only.
+- Product commits: `8dd05f2` per-size CUSTOM limits; `337a573` atomic cache writes; `c364816` provider byte and image pixel bounds; `c90562e` Libretro HTTP response bound; `ac25553` kernel-compatible existing-thumbnail validation; `9a54843` bounded Goomba ROM indexing; `ac5de88` provider URL and JSON response bounds; `7bcb16c` bounded local artwork reads; `1a7cb39` bounded and atomic Goomba save conversion; `7c7c11c` bounded ESV archive padding; `9cf9aab` short atomic staging names; `1a5c589` conservative ROM title normalization. Audit documents are committed separately as docs-only commits `48b1ee3`, `5734bfe`, `25a3b6e`, `6b7f4d0`, `8bea97e`, `472b0de`, `bb755cb`, `8f5e0f4`, plus the final close-out docs-only commit.
 
 ## C. Audit state
 
-- Phase: First-pass audit findings merged; second, fully adversarial audit on `main` is in progress. The first-pass full branch review was explicitly not exhaustive.
+- Phase: First-pass fixes merged; adversarial audit on `main` completed for the documented scope. The full branch review remains selective rather than line-by-line exhaustive.
 - Completed: repository guidance read (`README.md`, `READ ME.txt`, `CONTRIBUTING.md`, `LICENSE`, `MIRRORED_ARTWORK_IMPLEMENTATION.md`); baseline tests/compilation; remote refs and branch divergence.
-- Partial: commit-by-commit review of the full 34-commit branch diff; cache growth/expiry/invalidation, ROM matching, and Windows packaging/hardware behavior. Provider URL/redirect and save-conversion paths have been reviewed and hardened, but no live provider or removable-card hardware tests were run.
+- Partial/unverified: commit-by-commit review of the full 34-commit branch diff; original-Omega compatibility, Windows packaging, and physical-card/kernel behavior. Provider URL/redirect and save-conversion paths have been reviewed and hardened, but no live provider or removable-card hardware tests were run.
 - **Corrected compatibility baseline:** This DSSCC version targets Voluptuary’s `voluptuary/ezfode-dssmm-kernel` (Omega DE), not FrankieT19’s upstream kernel. The relevant target `main` inspected is `cff477969bc501548497e7be8dab9e3b445ba987` (2026-11-03), README identifies Merkin Mix v8.2.0 as latest. FrankieT19’s Omega DE kernel is secondary reference only for transferable changes; its source cannot override target behavior.
 - Output contract: target source verifies title `/SYSTEM/IMGS` at 120×80, box `/SYSTEM/IMGS2` at 80×80, uncompressed top-down 16-bit BMP, and `DST1` transparent-pixel handling. It implements mirrored ROM-relative lookup and falls back through flat CUSTOM/GBA art, extension default and NOTFOUND; details and exact references are in the progress journal. Target source caps each flat-CUSTOM directory scan at 256 regular entries. The Voluptuary repository is Omega DE only; original-Omega compatibility is not yet verified against a corresponding Voluptuary kernel.
 - Fixed verified defect: `build_custom_rom_output()` now checks each flat CUSTOM size separately, up to 256 total files per folder, including extension-default files. Although extension-default lookup opens its path directly, target manifest enumeration still counts every regular file and can stop at 256, so counting defaults prevents overflow/order-dependent missing indexed art.
@@ -42,16 +42,15 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 
 ## D. Exact next steps
 
-1. Commit the audit-doc update separately and push it with product commit `1a5c589` to `origin/main`; verify remote state.
-2. Finish the main-branch adversarial pass on cache/staleness and remaining ROM matching; treat cache eviction/refresh UX as an open product decision.
-3. Inspect the remaining branch diff selectively for additional high-impact defects; do not claim line-by-line exhaustive review.
-4. If original-Omega compatibility is required, audit against its own kernel source; current verified contract is Omega DE only.
-5. Run final full tests/compile/status/remote checks, append final findings and limitations to the audit docs in a docs-only commit, and keep working on `main`.
+1. No immediate code change remains from the verified findings. If work resumes, read both audit documents and inspect Git state first.
+2. Cache eviction, TTL, and a user-facing refresh/clear action remain product decisions; stale artwork and unbounded cache growth are documented, not silently addressed with an assumed policy.
+3. If original-Omega compatibility is required, audit against its own kernel source; this audit verified only the Omega DE contract from Voluptuary's repository.
+4. Windows packaging and physical-card/kernel validation require the corresponding Windows environment and hardware.
 
 ## E. Validation and tooling
 
 - Dependencies: `requirements.txt` contains `Pillow>=10.0.0`; baseline environment has Pillow 13.0.0. `build.ps1` invokes pip and PyInstaller; CI's release workflow builds on Windows with Python 3.12.
-- Test command: `python -m unittest discover -s tests -v` (165 passed after current adversarial changes). Syntax command: `python -m py_compile "DS Style Thumbnail Scraper.py" rom_matching.py thumbnail_output_paths.py thumbnail_image_data.py thumbnail_rendering.py ezflash_gba_thumbs.py goomba_save_converter.py` (passed).
+- Test command: `python -m unittest discover -s tests -v` (167 passed on final product code). Syntax command: `python -m py_compile "DS Style Thumbnail Scraper.py" rom_matching.py thumbnail_output_paths.py thumbnail_image_data.py thumbnail_rendering.py ezflash_gba_thumbs.py goomba_save_converter.py` (passed).
 - Primary compatibility reference: `https://github.com/voluptuary/ezfode-dssmm-kernel`, cloned at `/tmp/audit-voluptuary-ezfode`; head at inspection `cff477969bc501548497e7be8dab9e3b445ba987`, README reports v8.2.0. Its README documents 120×80 title / 80×80 box, top-down 16-bit BMP, `DST1` marker, and mirrored lookup.
 - Secondary comparison only: `https://github.com/FrankieT19/omega-de-ds-style-kernel` / `omega-ds-style-kernel`; recent inspected fit changes were browser-manager UX, not applicable kernel-contract fixes.
 - Tests: `python -m unittest discover -s tests -v`; compile check as above. Kernel build and hardware behavior are not validated by this host-side DSSCC audit.

@@ -541,3 +541,25 @@
 **Correction:** The preceding 14:27 entry described the fix as uncommitted; that status has been superseded by this product commit.
 
 **Next action:** Commit audit docs separately, push both to `origin/main`, verify remote state, then perform final checks and close the audit with explicit scope limitations.
+
+## 2026-11-05 14:30 UTC — ROM matching fix pushed
+
+**Milestone:** Product commit `1a5c589` and docs commit `8f5e0f4` are on `origin/main`; `git ls-remote origin refs/heads/main` returned `8f5e0f4d76cb011bcf452fa284ca6585f89c1d08`. The fork has only local `main` and `origin/main`; `upstream/feature/mirrored-artwork-retry-cache` still exists as a distinct upstream ref and was not modified or deleted.
+
+**Validation:** The code commit was preceded by 167 passing offline tests, 15 focused local/title tests, compilation, and whitespace checks. No live network, ROM, or artwork archive was used.
+
+**Next action:** Run final main-branch checks, reconcile all findings in the handoff, commit docs-only, push, and verify clean remote state.
+
+## 2026-11-05 14:31 UTC — Adversarial audit close-out
+
+**Objective:** Complete the adversarial pass on `main`, reconcile durable audit state, and record the detailed disposition without overstating coverage.
+
+**Verified/fixed findings:** (1) CUSTOM artwork could exceed the kernel's independent 256-entry per-folder scan limit; per-size counting now includes extension-default files. (2) Concurrent writes to a shared artwork-cache key collided on a deterministic temporary filename; unique same-directory staging files and atomic replacement now cover the race. (3) Provider, Libretro, and local-pack responses/files had unbounded byte reads and image decoding had no pixel ceiling; reads are capped (25 MiB for images, 10 MiB for API/JSON) and decoded images at 16 million pixels. (4) Existing thumbnails could be reused despite incompatible BMP layout; reuse now checks the target kernel's 120×80/80×80, uncompressed top-down 16-bit BMP contract. (5) Goomba indexing read whole ROMs for a short prefix; it now reads only the needed prefix. (6) Goomba ESV/SAV processing accepted unbounded inputs and wrote outputs directly; inputs are bounded and outputs use atomic replacement. (7) Provider-controlled image URLs and redirects could target untrusted destinations; HTTPS provider host allowlists and redirect validation now constrain them. (8) Atomic staging filenames could exceed filesystem filename limits; a short prefix replaces the longer name. (9) ROM title normalization removed arbitrary bracketed title text and could conflate local/remote matches; only recognized tags are stripped, with a regression for distinct subtitles. IGDB token-redaction concern was reproduced as a display artifact and retracted; no defect was found there.
+
+**Remaining findings/limitations:** **Verified limitation:** cache has no age/size eviction or explicit clear/refresh UI, so it can grow indefinitely. **Likely stale-cache defect:** ROM-relative and provider identity keys plus an indefinitely loaded Libretro index can reuse stale artwork after same-identity content changes. These were not changed because TTL/retention/refresh behavior is a product-policy decision. **Verified behavior:** provider fallback advances to another provider but there is no same-provider retry/backoff or `Retry-After` handling. **Verified storage consideration, not classified as a defect:** credentials reside unencrypted in the local JSON settings file. **Unverified:** allowlisted CDN compatibility/DNS trust under live conditions; physical-card atomic replacement/power loss; Omega original compatibility; Windows packaging; exact official artwork archive contents; complex title collisions. The primary kernel source is Voluptuary's `ezfode-dssmm-kernel`; FrankieT19 was checked only for portable improvements and no compatible kernel-contract fix was identified. The complete 34-commit branch diff was reviewed selectively, not line-by-line.
+
+**Final validation:** `python -m unittest discover -s tests -v` — 167 tests passed; targeted `py_compile` passed; `git diff --check` passed. No live third-party requests, ROMs, or artwork archives were used. Remote verification returned `origin/main` at `8f5e0f4d76cb011bcf452fa284ca6585f89c1d08`; the fork feature branch is absent locally and remotely, while the unrelated upstream feature ref remains present and untouched.
+
+**State:** No product code changed in this close-out. This journal and the handoff update are committed separately from product fixes and pushed to `origin/main`; final status and remote head are verified. No claim of exhaustive branch-diff review is made.
+
+**Next action:** No immediate task remains. Revisit cache retention/refresh only with a defined product policy; perform original-Omega, Windows, or hardware checks only if those compatibility targets are required.
