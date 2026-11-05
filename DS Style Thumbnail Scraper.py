@@ -35,11 +35,11 @@ from thumbnail_rendering import fit_image_to_canvas, should_fit_art
 from rom_matching import compute_rom_hashes, strip_nointro_tags
 from json_cache import write_json_atomic
 from goomba_save_converter import (
-    ARCHIVE_SIZE,
     FLASHGBX_MBC3_RTC_SIZE,
     GB_MODE_GB,
     GB_MODE_GBC_SGB,
     GoombaSave,
+    MAX_ARCHIVE_INPUT_SIZE,
     MAX_SAVE_SIZE,
     build_goomba_archive,
     extract_goomba_saves,
@@ -3309,7 +3309,9 @@ class ThumbnailScraperApp(tk.Tk):
                     )
                     try:
                         saves = extract_goomba_saves(
-                            read_bounded_bytes(archive_path, ARCHIVE_SIZE, "The ESV archive")
+                            read_bounded_bytes(
+                                archive_path, MAX_ARCHIVE_INPUT_SIZE, "The ESV archive"
+                            )
                         )
                         counts: dict[str, int] = {}
                         for save in saves:
@@ -3507,7 +3509,9 @@ class ThumbnailScraperApp(tk.Tk):
                 )
                 archive = (
                     merge_goomba_archive(
-                        read_bounded_bytes(destination, ARCHIVE_SIZE, "The ESV archive"),
+                        read_bounded_bytes(
+                            destination, MAX_ARCHIVE_INPUT_SIZE, "The ESV archive"
+                        ),
                         saves,
                         gameboy_mode,
                     )
