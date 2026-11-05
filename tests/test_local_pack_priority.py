@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from PIL import Image
 
@@ -39,6 +39,25 @@ def png_bytes(color):
 
 
 class LocalPackPriorityTests(unittest.TestCase):
+    def test_local_pack_rejects_oversized_image_without_unbounded_read(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "media"
+            root.mkdir()
+            oversized = root / "Tetris.png"
+            with oversized.open("wb") as stream:
+                stream.truncate(APP_MODULE.MAX_REMOTE_IMAGE_BYTES + 1)
+            providers = APP_MODULE.Providers(
+                SimpleNamespace(
+                    local_pack_var=Value(str(root)),
+                    region_allowed=lambda _title: True,
+                    region_priority=lambda _title: 0,
+                )
+            )
+
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("Unbounded read used")):
+                with self.assertRaisesRegex(LookupError, "No local art match"):
+                    providers.search_local_pack_many("Tetris", max_results=1, system="Game Boy")
+
     def test_return_keeps_selected_scan_game_attached_to_manual_search(self):
         game = {"title": "Crush Roller.ngc", "system": "Neo Geo Pocket", "path": "sd/Crush Roller.ngc"}
         app = SimpleNamespace(active_sd_scan_game=game)

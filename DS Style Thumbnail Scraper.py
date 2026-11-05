@@ -569,6 +569,16 @@ def fetch_bytes(url: str, provider: str, headers: dict[str, str] | None = None) 
         raise
 
 
+def read_local_art_data(path: Path) -> bytes:
+    with Path(path).open("rb") as image_file:
+        data = image_file.read(MAX_REMOTE_IMAGE_BYTES + 1)
+    if len(data) > MAX_REMOTE_IMAGE_BYTES:
+        raise ValueError("The local artwork image exceeds the 25 MiB limit.")
+    if not is_valid_image_data(data):
+        raise ValueError("The local artwork file is not a valid supported image.")
+    return data
+
+
 def title_regions(title: str) -> set[str]:
     # Region names count only as complete words, avoiding titles such as
     # "Europeans" or "Japanese Garden" being treated as regional releases.
@@ -1508,17 +1518,25 @@ class Providers:
                 if art and (not respect_regions or self.app.region_allowed(self.local_art_region_text(art)))
             ]
         limit = len(candidates) if max_results is None else max_results
-        results = [
-            ProviderResult(
-                "Local Pack",
-                self.local_art_label(art, pack_path),
-                art.path.read_bytes(),
-                system,
-                str(art.path),
+        results = []
+        for _score, art in candidates[:limit]:
+            if not art:
+                continue
+            try:
+                image_data = read_local_art_data(art.path)
+            except (OSError, ValueError):
+                continue
+            results.append(
+                ProviderResult(
+                    "Local Pack",
+                    self.local_art_label(art, pack_path),
+                    image_data,
+                    system,
+                    str(art.path),
+                )
             )
-            for _score, art in candidates[:limit]
-            if art
-        ]
+            if limit >= 0 and len(results) >= limit:
+                break
         if not results:
             raise LookupError(f"No local art match found for {query!r} on {system}.")
         return results
