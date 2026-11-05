@@ -435,3 +435,25 @@
 **Correction:** The prior 14:15 entry described code/tests as not yet committed; that was accurate at the time and is now superseded by this entry.
 
 **Next action:** Commit and push the audit-doc update separately, then continue adversarial review of cache identity/lifecycle and provider failure reporting.
+
+## 2026-11-05 14:16 UTC — Save-conversion commit pushed
+
+**Milestone:** Docs-only commit `8bea97e` and product commit `1a7cb39` were pushed to `origin/main`. `git ls-remote origin refs/heads/main` returned `8bea97eed748665fa10d4bb4a9bac76adec5706e`, matching local `HEAD`; the worktree was clean at verification.
+
+**Next action:** Continue adversarial cache identity/lifecycle and provider failure-reporting review on `main`.
+
+## 2026-11-05 14:16 UTC — ESV cap compatibility correction
+
+**Correction:** The 14:15 entry said ESV reads were bounded by `ARCHIVE_SIZE`. Review of `extract_goomba_saves()` showed it intentionally tolerates trailing bytes beyond the 64 KiB archive output size. To avoid imposing an unverified strict size contract, the pending code now uses a 1 MiB input cap while generated archives remain 64 KiB. The existing bounded-read test uses a small synthetic limit; run the full suite and compilation after this adjustment. Preserve the earlier entry as the implementation state at that time.
+
+**Working state:** The cap change is not committed; `main`'s latest pushed commit is `8bea97e`. Audit docs also have uncommitted status/correction updates. Keep code and docs commits separate.
+
+**Next action:** Revalidate and commit the cap adjustment, then resume cache and provider-error review.
+
+## 2026-11-05 14:18 UTC — ESV cap adjustment committed
+
+**Milestone:** Revalidated the 1 MiB ESV read cap and committed it as `7c7c11c` (`Allow bounded ESV archive padding`). The cap permits trailing/alternate archive data beyond the 64 KiB format emitted by the app while bounding memory; it rejects ESV inputs larger than 1 MiB.
+
+**Validation:** Full offline suite — 164 passed; Python compilation and `git diff --check` passed. The working tree now contains only audit-document corrections. The new product commit is local and not yet pushed.
+
+**Next action:** Commit the audit-doc correction separately, push both to `origin/main`, verify the remote, then continue cache and provider-error review.
