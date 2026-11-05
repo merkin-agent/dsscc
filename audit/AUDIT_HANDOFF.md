@@ -8,17 +8,17 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 
 ## B. Repository state
 
-- Branch: `feature/mirrored-artwork-retry-cache`, local `HEAD` at `5734bfe` (`Record pre-push audit checkpoint`), pushed to `origin` at the same commit.
-- Working tree: clean before this documentation update; five product commits and two docs-only audit commits are on `origin`. `origin/main` remains at `98fed08`.
-- Remotes: `origin` points to `merkin-agent/dsscc`; `upstream` points to `voluptuary/dsscc`. Both default branches are `main`, and both fetched `main` refs are identical at `98fed08d617b982b58d62c1bb9c2b4488b5ac8be`. Both remotes also have the feature branch at the audit HEAD (`8e95eb2`).
-- Divergence: HEAD is 34 commits ahead and zero behind both default branches, with the same merge base `98fed08`.
+- Branch: `feature/mirrored-artwork-retry-cache`, local `HEAD` at `9a54843` (`Bound Game Boy ROM index reads`); `origin` feature ref is one commit behind at `25a3b6e` pending this tested fix and docs update.
+- Working tree: product code is committed; handoff/progress docs are modified and will be committed docs-only. Six product commits are local; three audit-doc commits are already pushed.
+- Remotes: `origin` points to `merkin-agent/dsscc`; `upstream` points to `voluptuary/dsscc`. Both default branches are `main`, fetched at `98fed08d617b982b58d62c1bb9c2b4488b5ac8be`. `upstream` feature ref remains at `8e95eb2`; do not push there.
+- Divergence: local HEAD is 43 commits ahead and zero behind both default branches, with merge base `98fed08`.
 - Baseline: `python -m unittest discover -s tests -v` passed 147 tests; targeted `py_compile` passed. Python 3.14.2 and Pillow 13.0.0 are installed. PyInstaller is absent; the documented Windows build is not yet attempted.
-- Latest validation: after the kernel-compatible thumbnail reuse fix, the full offline suite passes 155 tests; focused SD/cache/local-pack tests pass (30 tests), targeted compilation and `git diff --check` pass.
-- Product commits: `8dd05f2` per-size CUSTOM limits; `337a573` atomic cache writes; `c364816` provider byte and image pixel bounds; `c90562e` Libretro HTTP response bound; `ac25553` kernel-compatible existing-thumbnail validation. Audit documents are committed separately as docs-only commits `48b1ee3` and `5734bfe`.
+- Latest validation: after bounding the Goomba ROM index read, the full offline suite passes 156 tests; focused Goomba tests pass (18 tests), targeted compilation and `git diff --check` pass.
+- Product commits: `8dd05f2` per-size CUSTOM limits; `337a573` atomic cache writes; `c364816` provider byte and image pixel bounds; `c90562e` Libretro HTTP response bound; `ac25553` kernel-compatible existing-thumbnail validation; `9a54843` bounded Goomba ROM indexing. Audit documents are committed separately as docs-only commits `48b1ee3`, `5734bfe`, and `25a3b6e`; this update will also be docs-only.
 
 ## C. Audit state
 
-- Phase: Phase 2 output-contract research substantially complete; branch feature audit underway.
+- Phase: Phase 2 output-contract research substantially complete; bounded first-pass audit findings recorded; full branch review is explicitly not exhaustive.
 - Completed: repository guidance read (`README.md`, `READ ME.txt`, `CONTRIBUTING.md`, `LICENSE`, `MIRRORED_ARTWORK_IMPLEMENTATION.md`); baseline tests/compilation; remote refs and branch divergence.
 - Partial: commit-by-commit review of the full 34-commit branch diff; provider URL/redirect policy, cache growth/expiry/invalidation, ROM matching, save conversion, and Windows packaging/hardware behavior.
 - **Corrected compatibility baseline:** This DSSCC version targets Voluptuary’s `voluptuary/ezfode-dssmm-kernel` (Omega DE), not FrankieT19’s upstream kernel. The relevant target `main` inspected is `cff477969bc501548497e7be8dab9e3b445ba987` (2026-11-03), README identifies Merkin Mix v8.2.0 as latest. FrankieT19’s Omega DE kernel is secondary reference only for transferable changes; its source cannot override target behavior.
@@ -41,13 +41,14 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 2. Determine whether the original-Omega variant is in scope and, if so, use its kernel source as a separate model comparison; do not assume DE support proves original support.
 3. Decide/document a cache eviction or clear policy for `SD scan artwork` and `SD scan ROM artwork`; inspect actual cache-path callers and provide actionable UI or user guidance if appropriate.
 4. Continue remaining branch-diff review, particularly local-pack matching, save conversion, and Windows release packaging; test any confirmed defects offline.
-5. Create a PR from this pushed feature branch to `main`; wait for and verify all required checks/reviews. Merge only through the permitted GitHub workflow (no protection bypass).
-6. After confirming the PR is fully merged, update/check out `main`, verify its commit contains the merge, then delete the local and fork feature branch. Do not delete the branch before merge verification; never touch upstream.
+5. Commit this tested Goomba ROM-index fix and pending docs-only update, push the latest product/docs commits to `origin`, create a PR from this branch to `main`, and wait for/verify all required checks/reviews. Merge only through the permitted GitHub workflow (no protection bypass).
+6. After confirming the PR is fully merged, check out `main`, verify its commit contains the merge, then delete the local and fork feature branch. Do not delete the branch before merge verification; never touch upstream.
+7. Once only on `main`, perform the user's requested second, fully adversarial audit of the merged state. Record new findings/fixes there and remain on `main`.
 
 ## E. Validation and tooling
 
 - Dependencies: `requirements.txt` contains `Pillow>=10.0.0`; baseline environment has Pillow 13.0.0. `build.ps1` invokes pip and PyInstaller; CI's release workflow builds on Windows with Python 3.12.
-- Test command: `python -m unittest discover -s tests -v` (155 passed after current fixes). Syntax command: `python -m py_compile "DS Style Thumbnail Scraper.py" rom_matching.py thumbnail_output_paths.py thumbnail_image_data.py thumbnail_rendering.py ezflash_gba_thumbs.py` (passed).
+- Test command: `python -m unittest discover -s tests -v` (156 passed after current fixes). Syntax command: `python -m py_compile "DS Style Thumbnail Scraper.py" rom_matching.py thumbnail_output_paths.py thumbnail_image_data.py thumbnail_rendering.py ezflash_gba_thumbs.py goomba_save_converter.py` (passed).
 - Primary compatibility reference: `https://github.com/voluptuary/ezfode-dssmm-kernel`, cloned at `/tmp/audit-voluptuary-ezfode`; head at inspection `cff477969bc501548497e7be8dab9e3b445ba987`, README reports v8.2.0. Its README documents 120×80 title / 80×80 box, top-down 16-bit BMP, `DST1` marker, and mirrored lookup.
 - Secondary comparison only: `https://github.com/FrankieT19/omega-de-ds-style-kernel` / `omega-ds-style-kernel`; not the primary contract for this adapted version.
 - Tests: `python -m unittest discover -s tests -v`; compile check as above. Kernel build and hardware behavior are not validated by this host-side DSSCC audit.

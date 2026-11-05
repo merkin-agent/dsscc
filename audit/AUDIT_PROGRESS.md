@@ -118,6 +118,20 @@
 
 **Next action:** Commit the tested product fix without audit documents, then continue cache reliability and branch audit against the Voluptuary kernel.
 
+## 2026-11-05 14:50 UTC — First-pass audit state before requested merge
+
+**Objective:** Record the latest tested Goomba-path improvement and the user's requested post-merge adversarial audit sequence.
+
+**Current code commit:** `9a54843` (`Bound Game Boy ROM index reads`), local/unpushed. Six product commits are on the feature branch locally; audit docs are separate commits, with this handoff update pending.
+
+**Validation:** `python -m unittest discover -s tests -v` — 156 passed after the ROM-index fix. Targeted Goomba suite — 18 passed. `py_compile` and `git diff --check` passed.
+
+**Current task sequence:** Push the current tested state to `origin`, create/merge a PR into fork `main` only after all required checks/reviews, verify merge completion, switch to main, then delete the feature branch. The user additionally requested a second fully adversarial audit on `main` after cleanup; perform that next and do not return to the deleted feature branch.
+
+**Open first-pass findings/limitations:** Cache growth has no eviction/clear policy; JSON responses remain uncapped; provider-returned image URLs and redirects are not host/scheme constrained; some image fetch errors are swallowed into generic no-match results; provider credentials are stored in plaintext local JSON; original-Omega compatibility and hardware behavior are unverified; the 34-commit branch diff was not exhaustively reviewed line-by-line. These must be stated, not concealed, in the merge summary and second-pass audit plan.
+
+**Next action:** Commit this handoff update docs-only, push, then proceed through the PR and merge process without bypassing protections.
+
 ## 2026-11-05 14:05 UTC — Image resource bounds added
 
 **Objective:** Bound remote image transfer size and decoded image dimensions so a malformed or unusually large provider image cannot consume unbounded memory during validation/cache operations.
@@ -213,6 +227,22 @@
 **Current scope qualification:** The audit has source-level Voluptuary kernel contract research, five verified fixes, focused provider/cache/image checks, and 155 passing offline tests. The full 34-commit feature diff has not been exhaustively reviewed line-by-line. Remaining uncertainties are documented in the handoff; do not represent the audit as exhaustive.
 
 **Next action:** Commit this docs-only status update, push it to the feature branch, create the PR to `main`, and merge only after required checks/reviews pass.
+
+## 2026-11-05 14:45 UTC — Bounded Game Boy ROM indexing read
+
+**Objective:** Check resource use in the branch's Goomba save-matching path, which scans local `.gb`/`.gbc` files to match saves by header/checksum.
+
+**Files/functions examined and changed:** `goomba_save_converter.py::scan_gb_rom_index`; `rom_title`, `rom_checksum`; `tests/test_goomba_save_converter.py`.
+
+**Finding:** **Verified defect (low-to-medium, memory use):** the indexer read each entire ROM into memory with `Path.read_bytes()`, although the title/header and Jagoomba checksum use only the first 16 KiB. A malformed or unexpectedly large `.gb`/`.gbc` file could cause unnecessary allocation during indexing. Expected: read only the required prefix. Actual before: load the complete file.
+
+**Fix/regression coverage:** Indexer now opens each ROM and reads only `0x4000` bytes. Added an offline test that patches `Path.read_bytes()` to fail and verifies the index still returns the correct header-title/checksum entry.
+
+**Validation:** `python -m unittest tests.test_goomba_save_converter -v` — 18 passed. `git diff --check` and compilation of the modified module/test passed. Full suite after this last change is pending.
+
+**Commit/push status:** Five prior product commits are pushed to `origin` at branch HEAD `25a3b6e`. This ROM-read optimization and regression test are uncommitted; audit documents are committed and pushed at that prior HEAD. No PR exists yet.
+
+**Next action:** Run the full suite, commit this code fix separately, update/push the handoff, then create the PR. Continue to state clearly that the broad branch review is not exhaustive.
 
 ## 2026-11-05 13:52 UTC — Cache reliability; concurrent staging collision
 
