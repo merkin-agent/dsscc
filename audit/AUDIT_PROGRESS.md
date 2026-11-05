@@ -327,3 +327,67 @@
 **User instruction:** Continue with a second, fully adversarial audit on `main`; do not switch back to or recreate the feature branch. Probe trust boundaries, malformed/untrusted inputs, concurrency, stale caches, output compatibility, matching errors, and packaging/build risks. Add tests/fixes on `main` for confirmed defects, run validation, and report findings with confidence and what remains.
 
 **Next action:** Commit the post-merge status docs on `main`, then begin the adversarial review from the merged `main` tree.
+
+## 2026-11-05 14:01 UTC — Adversarial review: provider URL SSRF risk fixed
+
+**Objective:** Address the conditional provider-response SSRF finding from the required read-only security review on merged `main`.
+
+**Security finding:** **Conditional risk, medium severity, confidence 8/10.** `search_thegamesdb_many`, its hash variant, ScreenScraper search/hash, and `fetch_bytes` accepted provider-response URLs with no host/scheme restrictions; `urllib` automatically followed redirects. A malicious/compromised response could trigger requests to unintended hosts or local services. This was a conditional concern, not reproduced against live providers; no live requests were made.
+
+**Files/functions changed:** `DS Style Thumbnail Scraper.py::_validate_provider_image_url`, `_ProviderImageRedirectHandler`, `fetch_bytes`, plus image fetch call sites. Updated offline provider fixtures/tests in `tests/test_provider_fallback_chain.py`, `tests/test_thegamesdb_fallback.py`, `tests/test_hash_provider_matching.py`, and `tests/test_retail_release_priority.py`.
+
+**Fix/regression coverage:** Each provider image request must identify its provider. IGDB is restricted to `images.igdb.com`; TheGamesDB to `thegamesdb.net` and its subdomains; ScreenScraper to `screenscraper.fr` and its subdomains. HTTPS only; rejects userinfo, non-default ports, and unknown provider hosts. A custom redirect handler validates each redirect destination against the same provider allowlist before following. Tests cover unapproved schemes/hosts, blocked local IP, blocked redirect, allowed provider CDN subdomain, bounded read, and existing provider fallback behavior.
+
+**Validation:** Focused provider/hash/retail/fallback tests — 24 passed. Full `python -m unittest discover -s tests -v` — 159 passed. Changed Python code compiled and `git diff --check` passed. No live host was contacted.
+
+**Residual risk/compatibility:** No live provider CDN behavior was checked; legitimate assets served from alternate domains will be rejected until explicitly approved. DNS for allowlisted provider domains is still trusted; this does not defend against compromise of a provider's DNS/domain.
+
+**Merge/branch state:** Work is on `main` only. PR #1 was merged to commit `535adb7cf2d06139899669e53d4d75a622d44af0`. The feature branch was deleted from local and `origin` after merge verification. `main` is tracking `origin/main`; upstream was untouched.
+
+**Next action:** Commit and push this main-only security fix and audit update, then continue adversarial review of remaining code paths and open limitations.
+
+## 2026-11-05 14:09 UTC — Adversarial API response bounds
+
+**Objective:** Close the remaining oversized-JSON-body resource risk found during the main adversarial pass.
+
+**Files/functions changed:** `DS Style Thumbnail Scraper.py::_read_provider_json_response`, `request_json`, `post_json`, and `post_form_json`; `tests/test_provider_fallback_chain.py`.
+
+**Finding:** **Verified resource limit gap (low-to-medium):** the image helpers were bounded, but JSON/API and OAuth responses still used unbounded `.read()`. An unexpectedly large provider response could consume unbounded memory before JSON parsing.
+
+**Fix/regression coverage:** Added a 10 MiB cap shared by all three provider JSON helpers, reading at most cap + 1 and rejecting oversized data. Responses now use context managers. Tests verify oversized response rejection for GET, JSON POST, and form POST; a success-path test verifies decoding and response closure.
+
+**Validation:** Focused provider/hash/fallback tests — 26 passed. Full `python -m unittest discover -s tests -v` — 161 passed. `py_compile` and `git diff --check` passed. No live network calls were made.
+
+**Working tree/state:** Still on `main` (`d7bc01d` before pending commit); branch cleanup remains complete. Code/test changes and audit docs are pending.
+
+**Remaining adversarial scope:** Continue checking local-pack filesystem trust and symlink behavior, cache invalidation/eviction and multi-process behavior, errors surfaced from provider image loops, and save conversion/matching edge cases. Windows packaging and physical-card behavior remain unverified.
+
+**Next action:** Commit the combined provider URL and JSON-bound changes on `main`, push, then continue the adversarial review on `main` only.
+
+## 2026-11-05 14:11 UTC — Local-pack image read bounded
+
+**Objective:** Check local artwork packs as an untrusted input boundary, particularly before allocating image bytes for a selected candidate.
+
+**Finding:** **Verified resource issue (medium, confidence 9/10):** `Providers.search_local_pack_many()` read each selected local art file with unbounded `Path.read_bytes()` before the downstream image validation. An oversized or malformed `.png`/`.jpg` placed in a selected pack could consume excessive memory. Reproduction: create an oversized supported-extension file with a title that matches the query and call `search_local_pack_many()`; the former code read the entire file.
+
+**Fix/regression coverage:** Added `read_local_art_data()` to read at most 25 MiB + 1, reject oversized or invalid image data, and changed local candidate selection to continue to later candidates when one file is unusable. Added `test_local_pack_rejects_oversized_image_without_unbounded_read`, using a sparse oversized file and asserting no `Path.read_bytes()` call occurs. Result ordering and `max_results` slicing remain preserved.
+
+**Validation:** Focused `tests.test_local_pack_priority` — 8 passed. Full `python -m unittest discover -s tests -v` — 162 passed. Targeted `py_compile` and `git diff --check` passed.
+
+**Commit/push state:** The provider URL/redirect and 10 MiB JSON response safeguards were committed separately as product commit `ac5de88` (`Restrict provider image destinations`) on `main`; not pushed yet. The local-pack bound and test remain uncommitted. Handoff/progress edits are pending and will be a docs-only commit, separate from product changes.
+
+**Correction to preceding entry:** The preceding 14:09 entry's validation count (161) predates the new local-pack regression test; the current full suite count is 162. Its state description also predates commit `ac5de88`; that product commit is now in local history, not yet pushed. Preserve that entry as historical context.
+
+**Remaining scope:** Cache expiry/invalidation and multi-process behavior, provider image-error reporting, save conversion and matching, Windows packaging, and physical-card validation remain incomplete or unverified.
+
+**Next action:** Commit the local-pack code/test fix, update the handoff with the resulting commit and latest state, commit audit docs separately, push both to `origin/main`, and continue the adversarial audit.
+
+## 2026-11-05 14:12 UTC — Local-pack fix committed
+
+**Milestone:** The bounded local-pack read fix and regression test were committed on `main` as `7bcb16c` (`Bound local artwork reads`), separate from the provider safeguards commit `ac5de88`. `git status` shows only the two audit documents modified; `origin/main` is two commits behind local `main`.
+
+**Validation:** The full offline suite remains 162/162 passing; the focused local-pack suite passed 8/8. `py_compile` and `git diff --check` passed before the product commit.
+
+**Correction:** The previous entry described the fix as uncommitted; that status was true at entry time and is now superseded by this milestone. Audit documents remain uncommitted and will be committed docs-only.
+
+**Next action:** Commit the audit-document update separately, push all validated commits to `origin/main`, verify remote state, then resume the adversarial audit.
