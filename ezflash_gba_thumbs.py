@@ -15,6 +15,7 @@ from typing import Iterable
 
 from PIL import Image, ImageOps
 from json_cache import write_json_atomic
+from rom_matching import strip_nointro_tags
 
 
 LIBRETRO_API = (
@@ -66,7 +67,7 @@ class RomInfo:
 
 def clean_title(value: str) -> str:
     value = Path(value).stem
-    value = re.sub(r"\([^)]*\)|\[[^]]*\]", " ", value)
+    value = strip_nointro_tags(value, preserve_regions=False)
     value = re.sub(r"\b(Rev|Beta|Proto|Demo|Hack|Fixed|Trashman)\b.*", " ", value, flags=re.I)
     value = value.replace("_", " ")
     value = re.sub(r"\s+", " ", value)

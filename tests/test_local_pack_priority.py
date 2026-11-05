@@ -39,6 +39,28 @@ def png_bytes(color):
 
 
 class LocalPackPriorityTests(unittest.TestCase):
+    def test_local_pack_matching_preserves_unknown_bracketed_title_text(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "media"
+            root.mkdir()
+            wanted = root / "Game [Lost Levels].png"
+            other = root / "Game [Other Story].png"
+            wanted.write_bytes(png_bytes((10, 200, 30)))
+            other.write_bytes(png_bytes((200, 10, 30)))
+            providers = APP_MODULE.Providers(
+                SimpleNamespace(
+                    local_pack_var=Value(str(root)),
+                    region_allowed=lambda _title: True,
+                    region_priority=lambda _title: 0,
+                )
+            )
+
+            results = providers.search_local_pack_many(
+                "Game [Lost Levels]", max_results=1, system="Game Boy"
+            )
+
+            self.assertEqual(results[0].image_data, wanted.read_bytes())
+
     def test_local_pack_rejects_oversized_image_without_unbounded_read(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "media"

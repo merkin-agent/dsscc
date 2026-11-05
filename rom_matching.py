@@ -29,6 +29,10 @@ STATUS_TAGS = {
     "rev 2", "rev 3", "rev 4", "revision 1", "revision 2", "revision 3",
     "sgb enhanced", "gb compatible", "rumble version", "enhanced",
 }
+NOINTRO_BRACKET_TAG = re.compile(
+    r"(?:!|[abcfhmoprtux]\d*|t[+-][a-z]{2,3}(?:\d+(?:\.\d+)*)?)",
+    re.IGNORECASE,
+)
 
 
 def _is_region_tag(content: str) -> bool:
@@ -61,22 +65,27 @@ def _is_release_tag(content: str) -> bool:
     return False
 
 
-def strip_nointro_tags(title: str) -> str:
-    """Return a search title with region tags preserved and other metadata cleaned.
+def strip_nointro_tags(title: str, *, preserve_regions: bool = True) -> str:
+    """Return a search title with known No-Intro metadata cleaned.
 
     Parenthetical region tags such as (USA), (Europe), (Japan), and (USA, Europe)
-    are retained to keep region-specific provider matches possible. Language,
-    revision/version, status, and square-bracketed dump tags are stripped. The
-    original ROM filename, output path, and cache identity are never changed.
+    are retained by default to keep region-specific provider matches possible.
+    Language, revision/version, status, and recognized square-bracketed dump
+    tags are stripped. The original ROM filename, output path, and cache identity
+    are never changed.
     """
     result = str(title or "").strip()
-    # Filename-only, square-bracketed dump flags: [!], [b1], [h], [T+Eng], etc.
-    result = re.sub(r"\s*\[[^\]]*\]\s*", " ", result)
+    def remove_known_bracketed_tag(match: re.Match[str]) -> str:
+        content = re.sub(r"\s+", "", match.group(1).casefold())
+        return " " if NOINTRO_BRACKET_TAG.fullmatch(content) else match.group(0)
+
+    # Preserve bracketed title text and remove only recognized dump/translation flags.
+    result = re.sub(r"\s*\[([^\]]*)\]\s*", remove_known_bracketed_tag, result)
 
     def remove_known_parenthetical(match: re.Match[str]) -> str:
         content = match.group(1)
         if _is_region_tag(content):
-            return match.group(0)
+            return match.group(0) if preserve_regions else " "
         return " " if _is_release_tag(content) else match.group(0)
 
     result = re.sub(r"\(([^()]*)\)", remove_known_parenthetical, result)

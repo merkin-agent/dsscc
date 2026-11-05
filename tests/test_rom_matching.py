@@ -31,6 +31,12 @@ class RomMatchingUtilityTests(unittest.TestCase):
             "The Legend (The Lost Levels) (USA)",
         )
 
+    def test_preserves_unknown_bracketed_title_text_and_strips_known_dump_tags(self):
+        self.assertEqual(
+            strip_nointro_tags("Game [Lost Levels] (USA) [!] [b1] [T+Eng]"),
+            "Game [Lost Levels] (USA)",
+        )
+
     def test_hashes_crc32_md5_sha1_and_size_in_one_pass(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "known.gb"
