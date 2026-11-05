@@ -8,13 +8,13 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 
 ## B. Repository state
 
-- Branch: `main`, local and `origin/main` at `30596e5` (`Update adversarial audit handoff`); working tree clean at last verification.
-- Working tree: provider safeguards and bounded local-pack reads are committed and pushed; audit documents are pushed in a separate docs-only commit. PR #1 is merged; the feature branch was deleted from local and `origin` only after verifying the merge. Upstream was untouched.
+- Branch: `main`, latest commit `1a7cb39` (`Protect Goomba save conversion files`); not yet pushed. Only audit-doc edits are pending.
+- Working tree: provider safeguards and bounded local-pack reads are committed and pushed. Goomba save-conversion hardening is committed locally; audit docs will remain a separate docs-only commit. PR #1 is merged; the feature branch was deleted from local and `origin` only after verifying the merge. Upstream was untouched.
 - Remotes: `origin` points to `merkin-agent/dsscc`; `upstream` points to `voluptuary/dsscc`. Both default branches are `main`, fetched at `98fed08d617b982b58d62c1bb9c2b4488b5ac8be`. `upstream` feature ref remains at `8e95eb2`; do not push there.
 - Divergence: local `main` matches `origin/main`; merge base with the prior feature branch was `98fed08`.
 - Baseline: `python -m unittest discover -s tests -v` passed 147 tests; targeted `py_compile` passed. Python 3.14.2 and Pillow 13.0.0 are installed. PyInstaller is absent; the documented Windows build is not yet attempted.
-- Latest validation: after provider URL/redirect restrictions, bounded JSON responses, and the pending local-pack read bound, the full offline suite passes 162 tests; focused local-pack tests pass (8 tests), targeted compilation and `git diff --check` pass.
-- Product commits: `8dd05f2` per-size CUSTOM limits; `337a573` atomic cache writes; `c364816` provider byte and image pixel bounds; `c90562e` Libretro HTTP response bound; `ac25553` kernel-compatible existing-thumbnail validation; `9a54843` bounded Goomba ROM indexing; `ac5de88` provider URL and JSON response bounds; `7bcb16c` bounded local artwork reads. Audit documents are committed separately as docs-only commits `48b1ee3`, `5734bfe`, and `25a3b6e`; this update will also be docs-only.
+- Latest validation: after provider URL/redirect restrictions, bounded JSON responses, local-pack bounds, and pending Goomba save-conversion safeguards, the full offline suite passes 164 tests; focused Goomba tests pass (20 tests), targeted compilation and `git diff --check` pass.
+- Product commits: `8dd05f2` per-size CUSTOM limits; `337a573` atomic cache writes; `c364816` provider byte and image pixel bounds; `c90562e` Libretro HTTP response bound; `ac25553` kernel-compatible existing-thumbnail validation; `9a54843` bounded Goomba ROM indexing; `ac5de88` provider URL and JSON response bounds; `7bcb16c` bounded local artwork reads; `1a7cb39` bounded and atomic Goomba save conversion. Audit documents are committed separately as docs-only commits `48b1ee3`, `5734bfe`, `25a3b6e`, and `6b7f4d0`; this update will also be docs-only.
 
 ## C. Audit state
 
@@ -33,6 +33,7 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 - **Fixed conditional SSRF risk (medium, 8/10 before fix):** Provider image URLs are now constrained to the provider's HTTPS host allowlist, and each redirect is validated before following. Non-HTTPS, userinfo, non-default ports, and unapproved hosts are rejected. Residual: no live CDN compatibility checks; allowlisted domains' DNS is trusted.
 - Provider metadata/auth responses are now capped at 10 MiB through `request_json()`, `post_json()`, and `post_form_json()`, in addition to the 25 MiB image/Libretro cap. Offline tests verify both bounded and successful response reads.
 - **Verified/fixed local resource issue:** `search_local_pack_many()` previously called `Path.read_bytes()` on selected image paths without a size bound. A malformed local pack could therefore trigger an unbounded allocation before image validation. Commit `7bcb16c` reads at most 25 MiB + 1, rejects oversized/invalid files, and continues to other candidates; a sparse oversized-file regression test verifies bounded behavior.
+- **Fixed save-conversion risks:** commit `1a7cb39` bounds ESV/SAV inputs using format limits and writes extracted SAV/merged ESV outputs via same-directory atomic replacement. Tests verify bounded reads and that an existing archive remains intact when replacement fails. Power-loss behavior on removable-card filesystems remains unverified.
 - **Verified storage behavior:** provider credentials are included in the local JSON settings file without encryption. This is not treated as a confirmed defect because no OS credential-store requirement is specified; users must protect their local profile.
 - Open uncertainties: target official artwork archive contents not inspected (avoid downloading its 49 MB archive); exact Omega DE release matching app v2.0.4; original-Omega compatibility; full commit-by-commit review; local-pack/ROM matching edge cases; save conversion; Windows packaging and physical-card behavior.
 
@@ -42,12 +43,13 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 2. Determine whether the original-Omega variant is in scope and, if so, use its kernel source as a separate model comparison; do not assume DE support proves original support.
 3. Decide/document a cache eviction or clear policy for `SD scan artwork` and `SD scan ROM artwork`; inspect actual cache-path callers and provide actionable UI or user guidance if appropriate.
 4. Continue remaining branch-diff review, particularly local-pack matching, save conversion, and Windows release packaging; test any confirmed defects offline.
-5. Continue the requested fully adversarial audit on `main`; inspect cache invalidation/eviction and multi-process behavior, provider error reporting, save conversion, and Windows packaging. Add regression tests/fixes for confirmed defects, run the full suite, and remain on `main`.
+5. Commit the audit-doc update separately and push it plus product commit `1a7cb39` to `origin/main`.
+6. Continue the requested fully adversarial audit on `main`; inspect cache invalidation/eviction and multi-process behavior, provider error reporting, and Windows packaging. Add regression tests/fixes for confirmed defects, run the full suite, and remain on `main`.
 
 ## E. Validation and tooling
 
 - Dependencies: `requirements.txt` contains `Pillow>=10.0.0`; baseline environment has Pillow 13.0.0. `build.ps1` invokes pip and PyInstaller; CI's release workflow builds on Windows with Python 3.12.
-- Test command: `python -m unittest discover -s tests -v` (162 passed after current adversarial changes). Syntax command: `python -m py_compile "DS Style Thumbnail Scraper.py" rom_matching.py thumbnail_output_paths.py thumbnail_image_data.py thumbnail_rendering.py ezflash_gba_thumbs.py goomba_save_converter.py` (passed).
+- Test command: `python -m unittest discover -s tests -v` (164 passed after current adversarial changes). Syntax command: `python -m py_compile "DS Style Thumbnail Scraper.py" rom_matching.py thumbnail_output_paths.py thumbnail_image_data.py thumbnail_rendering.py ezflash_gba_thumbs.py goomba_save_converter.py` (passed).
 - Primary compatibility reference: `https://github.com/voluptuary/ezfode-dssmm-kernel`, cloned at `/tmp/audit-voluptuary-ezfode`; head at inspection `cff477969bc501548497e7be8dab9e3b445ba987`, README reports v8.2.0. Its README documents 120×80 title / 80×80 box, top-down 16-bit BMP, `DST1` marker, and mirrored lookup.
 - Secondary comparison only: `https://github.com/FrankieT19/omega-de-ds-style-kernel` / `omega-ds-style-kernel`; not the primary contract for this adapted version.
 - Tests: `python -m unittest discover -s tests -v`; compile check as above. Kernel build and hardware behavior are not validated by this host-side DSSCC audit.

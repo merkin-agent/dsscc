@@ -399,3 +399,39 @@
 **Validation:** The pushed commits were preceded by 162 passing offline tests, 8 focused local-pack tests, compilation, and whitespace checks. No live provider requests were made.
 
 **Next action:** Continue adversarial review on `main`; prioritize cache key invalidation and growth, provider failure reporting, save conversion, and Windows packaging. Keep audit docs current and commit them separately from any further product changes.
+
+## 2026-11-05 14:12 UTC — Save-conversion write/read boundary investigation
+
+**Objective:** Review selected Goomba/Jagoomba ESV and SAV file handling for corruption and resource-exhaustion risks before claiming the adversarial pass complete.
+
+**Evidence examined:** `DS Style Thumbnail Scraper.py` conversion workers around ESV extraction and SAV-to-ESV merge; `goomba_save_converter.py` archive size/record limits and `build_goomba_archive()`; `tests/test_goomba_save_converter.py`.
+
+**Findings:** **Likely defect (medium, confidence 8/10):** merging a user-selected ESV overwrites it with `Path.write_bytes()` directly. An interrupted or failed write can truncate/corrupt the original archive after explicit confirmation. The new archive is fully built before writing, so same-directory atomic replacement can preserve the previous archive if persistence fails. **Verified resource issue (medium, confidence 8/10):** selected `.esv` and `.sav` inputs are read with unbounded `read_bytes()` despite format limits (`ARCHIVE_SIZE` and `MAX_SAVE_SIZE` plus optional RTC trailer); malformed large files can allocate unnecessarily before parser/encoder rejection.
+
+**Planned response:** Add bounded file reads using the existing format limits, add a same-directory atomic byte writer, use it for ESV merge outputs (and newly extracted SAV outputs), and add offline tests for oversized-file bounded reads and preserving an existing archive when replacement fails.
+
+**Status:** Investigation identified concrete paths; implementation and validation pending. Do not treat this change as verified until tests pass.
+
+## 2026-11-05 14:15 UTC — Goomba save conversion safeguards implemented
+
+**Finding/fix:** The direct ESV merge write could truncate the user's existing archive on interruption or write failure. The conversion worker now stages extracted SAV and merged ESV output in the destination directory, flushes it, and replaces the target atomically. A regression test forces replacement failure and verifies the previous archive remains unchanged and temporary files are cleaned.
+
+**Resource bounds:** ESV inputs are read at most `ARCHIVE_SIZE + 1`; SAV inputs are read at most `MAX_SAVE_SIZE + FLASHGBX_MBC3_RTC_SIZE + 1`. Oversized files are rejected before parsing/encoding. Both ESV extraction and merge paths use bounded reads; a sparse oversized-file test asserts there is no unbounded `Path.read_bytes()` call.
+
+**Validation:** Focused Goomba converter tests — 20 passed. Full `python -m unittest discover -s tests -v` — 164 passed. Changed Python modules compiled and `git diff --check` passed.
+
+**State:** Code and test changes are implemented but not committed. Audit documents remain modified and must be committed separately. No live services or game files were used; all tests use generated files.
+
+**Residual limitation:** This verifies the host-side write sequence but not power-loss behavior on every removable-card filesystem. The same-directory replacement reduces the corruption window; hardware/kernel behavior remains untested.
+
+**Next action:** Commit the save-conversion code/tests separately from audit docs, then continue cache and provider-error review.
+
+## 2026-11-05 14:16 UTC — Save-conversion fix committed
+
+**Milestone:** The bounded ESV/SAV input and atomic output changes with tests were committed as `1a7cb39` (`Protect Goomba save conversion files`) on `main`. The product commit is local and not yet pushed. The working tree contains only audit-doc changes; those will be committed docs-only.
+
+**Validation:** Re-ran the complete offline suite on the final code diff: 164 tests passed. `py_compile` and `git diff --check` passed.
+
+**Correction:** The prior 14:15 entry described code/tests as not yet committed; that was accurate at the time and is now superseded by this entry.
+
+**Next action:** Commit and push the audit-doc update separately, then continue adversarial review of cache identity/lifecycle and provider failure reporting.
