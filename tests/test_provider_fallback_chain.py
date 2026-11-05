@@ -49,6 +49,20 @@ def make_provider_app(tmp_path):
 
 
 class ProviderFallbackChainTests(unittest.TestCase):
+    def test_fetch_bytes_caps_download_size(self):
+        response = Mock()
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        response.read.return_value = b"x" * 9
+
+        with patch.object(APP_MODULE, "MAX_REMOTE_IMAGE_BYTES", 8), patch.object(
+            APP_MODULE.urllib.request, "urlopen", return_value=response
+        ):
+            with self.assertRaisesRegex(ValueError, "exceeds the 25 MiB download limit"):
+                APP_MODULE.fetch_bytes("https://images.example/art.png")
+
+        response.read.assert_called_once_with(9)
+
     def test_chain_order_is_tgdb_then_screenscraper_then_igdb(self):
         with tempfile.TemporaryDirectory() as temp:
             providers = APP_MODULE.Providers(make_provider_app(temp))

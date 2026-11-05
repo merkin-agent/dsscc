@@ -388,6 +388,7 @@ WEB_HEADERS = {
     "Accept": "application/json,text/plain,*/*",
     "Accept-Language": "en-US,en;q=0.9",
 }
+MAX_REMOTE_IMAGE_BYTES = 25 * 1024 * 1024
 
 
 def libretro_repo(system: str) -> str:
@@ -501,7 +502,11 @@ def post_form_json(url: str, fields: dict[str, str]) -> dict:
 def fetch_bytes(url: str, headers: dict[str, str] | None = None) -> bytes:
     request = urllib.request.Request(url, headers=headers or WEB_HEADERS)
     try:
-        return urllib.request.urlopen(request, timeout=30).read()
+        with urllib.request.urlopen(request, timeout=30) as response:
+            data = response.read(MAX_REMOTE_IMAGE_BYTES + 1)
+        if len(data) > MAX_REMOTE_IMAGE_BYTES:
+            raise ValueError("The image response exceeds the 25 MiB download limit.")
+        return data
     except urllib.error.HTTPError as exc:
         if exc.code == 403:
             raise LookupError("The image host refused the download (403 Forbidden). Try another result/provider, or try again later.") from exc

@@ -7,6 +7,12 @@ from pathlib import Path
 
 from PIL import Image, UnidentifiedImageError
 
+MAX_IMAGE_PIXELS = 16_000_000
+
+
+def _has_safe_dimensions(image: Image.Image) -> bool:
+    return image.width * image.height <= MAX_IMAGE_PIXELS
+
 
 def is_valid_image_data(data: bytes | bytearray | memoryview | None) -> bool:
     """Return whether *data* contains a fully decodable raster image.
@@ -23,6 +29,8 @@ def is_valid_image_data(data: bytes | bytearray | memoryview | None) -> bool:
         # load() forces decoding rather than checking only the header. A
         # successful Image.open() alone does not detect every truncated file.
         with Image.open(io.BytesIO(bytes(data))) as image:
+            if not _has_safe_dimensions(image):
+                return False
             image.load()
         return True
     except (
@@ -44,6 +52,8 @@ def is_valid_image_file(path: str | Path, expected_size: tuple[int, int] | None 
     """
     try:
         with Image.open(Path(path)) as image:
+            if not _has_safe_dimensions(image):
+                return False
             image.load()
             return expected_size is None or image.size == expected_size
     except (

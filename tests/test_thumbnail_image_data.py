@@ -1,9 +1,13 @@
 import io
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image
 
-from thumbnail_image_data import is_valid_image_data
+import thumbnail_image_data
+from thumbnail_image_data import is_valid_image_data, is_valid_image_file
 
 
 class ThumbnailImageDataTests(unittest.TestCase):
@@ -30,6 +34,16 @@ class ThumbnailImageDataTests(unittest.TestCase):
 
     def test_rejects_arbitrary_text_payload(self):
         self.assertFalse(is_valid_image_data(b"version https://git-lfs.github.com/spec/v1\n"))
+
+    def test_rejects_images_over_pixel_limit_before_decoding(self):
+        image_data = self.make_png()
+        with patch.object(thumbnail_image_data, "MAX_IMAGE_PIXELS", 95):
+            self.assertFalse(is_valid_image_data(image_data))
+
+            with tempfile.TemporaryDirectory() as temp:
+                image_path = Path(temp) / "large.png"
+                image_path.write_bytes(image_data)
+                self.assertFalse(is_valid_image_file(image_path))
 
 
 if __name__ == "__main__":
