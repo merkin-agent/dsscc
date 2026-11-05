@@ -40,7 +40,7 @@ def write_bytes_atomically(path: Path, data: bytes) -> None:
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{destination.name}.",
+        prefix=".dsscc-",
         suffix=".tmp",
         dir=destination.parent,
     )

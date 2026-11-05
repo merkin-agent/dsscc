@@ -57,6 +57,12 @@ class GoombaSaveConverterTests(unittest.TestCase):
             self.assertEqual(destination.read_bytes(), b"original archive")
             self.assertEqual(list(Path(temp).iterdir()), [destination])
 
+    def test_atomic_archive_write_supports_long_destination_names(self):
+        with tempfile.TemporaryDirectory() as temp:
+            destination = Path(temp) / f"{'a' * 245}.esv"
+            write_bytes_atomically(destination, b"archive")
+            self.assertEqual(destination.read_bytes(), b"archive")
+
     def test_literal_lzo_round_trips_across_extension_boundaries(self):
         for size in (4, 238, 239, 273, 274, 528, 8192, 32768):
             with self.subTest(size=size):
