@@ -513,7 +513,8 @@ def scan_gb_rom_index(
         progress_callback(0, len(rom_paths), root)
     for current, rom_path in enumerate(rom_paths, start=1):
         try:
-            rom = rom_path.read_bytes()
+            with rom_path.open("rb") as stream:
+                rom = stream.read(0x4000)
             title = rom_title(rom)
             checksum = rom_checksum(rom)
             mapper_type = rom[0x147]

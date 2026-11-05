@@ -2,6 +2,7 @@ import struct
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from goomba_save_converter import (
     CONFIG_GB_MODE_MASK,
@@ -262,6 +263,19 @@ class GoombaSaveConverterTests(unittest.TestCase):
         self.assertIn("tetrisdx", index)
         self.assertEqual([current for current, _, _ in progress], [0, 1, 2])
         self.assertTrue(all(total == 2 for _, total, _ in progress))
+
+    def test_rom_index_reads_only_the_header_and_checksum_prefix(self):
+        with tempfile.TemporaryDirectory() as temp:
+            rom_path = Path(temp) / "large.gb"
+            rom = bytearray(0x4000)
+            rom[0x134:0x143] = b"LIMITED READ".ljust(15, b"\0")
+            rom_path.write_bytes(rom + b"\xAA" * 1024)
+
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("Unbounded read used")):
+                index = scan_gb_rom_index(Path(temp))
+
+        self.assertIn("limitedread", index)
+        self.assertIn(rom_checksum(bytes(rom)), index["limitedread"])
 
     def test_literal_lzo_rejects_oversized_output(self):
         stream = lzo1x_literal_compress(b"x" * 512)
