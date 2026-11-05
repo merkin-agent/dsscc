@@ -8,8 +8,8 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 
 ## B. Repository state
 
-- Branch: `main`, latest commit `7bcb16c` (`Bound local artwork reads`); two product commits are ahead of `origin/main` and not pushed yet.
-- Working tree: product changes are committed; only audit-doc updates are uncommitted. PR #1 is merged; the feature branch was deleted from local and `origin` only after verifying the merge. Upstream was untouched.
+- Branch: `main`, local and `origin/main` at `30596e5` (`Update adversarial audit handoff`); working tree clean at last verification.
+- Working tree: provider safeguards and bounded local-pack reads are committed and pushed; audit documents are pushed in a separate docs-only commit. PR #1 is merged; the feature branch was deleted from local and `origin` only after verifying the merge. Upstream was untouched.
 - Remotes: `origin` points to `merkin-agent/dsscc`; `upstream` points to `voluptuary/dsscc`. Both default branches are `main`, fetched at `98fed08d617b982b58d62c1bb9c2b4488b5ac8be`. `upstream` feature ref remains at `8e95eb2`; do not push there.
 - Divergence: local `main` matches `origin/main`; merge base with the prior feature branch was `98fed08`.
 - Baseline: `python -m unittest discover -s tests -v` passed 147 tests; targeted `py_compile` passed. Python 3.14.2 and Pillow 13.0.0 are installed. PyInstaller is absent; the documented Windows build is not yet attempted.
@@ -42,8 +42,7 @@ Repository identity: Python Windows desktop application; entry point is `DS Styl
 2. Determine whether the original-Omega variant is in scope and, if so, use its kernel source as a separate model comparison; do not assume DE support proves original support.
 3. Decide/document a cache eviction or clear policy for `SD scan artwork` and `SD scan ROM artwork`; inspect actual cache-path callers and provide actionable UI or user guidance if appropriate.
 4. Continue remaining branch-diff review, particularly local-pack matching, save conversion, and Windows release packaging; test any confirmed defects offline.
-5. Commit the audit docs separately as a docs-only commit, then push product and audit commits to `origin/main`.
-6. On `main` only, continue the requested fully adversarial audit of the merged state; inspect cache invalidation/eviction and multi-process behavior, provider error reporting, save conversion, and Windows packaging. Add regression tests/fixes for confirmed defects, run the full suite, and remain on `main`.
+5. Continue the requested fully adversarial audit on `main`; inspect cache invalidation/eviction and multi-process behavior, provider error reporting, save conversion, and Windows packaging. Add regression tests/fixes for confirmed defects, run the full suite, and remain on `main`.
 
 ## E. Validation and tooling
 
